@@ -1,16 +1,117 @@
-# React + Vite
+# FutBot — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interfaz web del juego FutBot: registro de clubes, creación de jugadores y comportamientos, ligas, amistosos y visualización del partido en vivo en 2D.
 
-Currently, two official plugins are available:
+Este repositorio maneja únicamente la interacción con el usuario. Toda la lógica de negocio y los datos viven en [futbot-backend](https://github.com/IngSoft1-los-transistores/futbot-backend).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+**Materia:** Ingeniería de Software I· **Equipo:** Los Transistores
 
-## React Compiler
+> ⚠️ **Esta aplicación no funciona sola: necesita el backend corriendo.** Antes de levantar el frontend, seguir las instrucciones de instalación del repositorio [futbot-backend](https://github.com/IngSoft1-los-transistores/futbot-backend).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Expanding the ESLint configuration
+## Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+| Componente | Tecnología |
+|---|---|
+| Librería | React 19 |
+| Build y dev server | Vite |
+| Lenguaje | JavaScript |
+| Ruteo | React Router |
+| HTTP | axios |
+| Tiempo real | WebSocket nativo del navegador |
+| Linter | ESLint |
+
+## Requisitos previos
+
+- **Node.js 20 LTS o superior** — verificar con `node --version`
+- **npm** (viene con Node) — verificar con `npm --version`
+- **El backend corriendo** en `http://localhost:8000`
+
+## Instalación
+
+**1. Clonar el repositorio**
+
+```bash
+git clone https://github.com/IngSoft1-los-transistores/futbot-frontend.git
+cd futbot-frontend
+```
+
+**2. Instalar las dependencias**
+
+```bash
+npm install
+```
+
+Esto crea la carpeta `node_modules/`, que no se sube al repositorio.
+
+**3. Configurar las variables de entorno**
+
+```bash
+cp .env.example .env
+```
+
+Los valores por defecto funcionan si el backend corre en el puerto 8000. Si se cambió el puerto del backend, hay que actualizar las dos variables.
+
+## Correr la aplicación
+
+Con el backend ya levantado, en otra terminal:
+
+```bash
+npm run dev
+```
+
+La aplicación queda en **http://localhost:5173**.
+
+Para detenerla: `Ctrl+C`.
+
+### Otros comandos
+
+| Comando | Qué hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo, con recarga automática al guardar |
+| `npm run build` | Compila la versión de producción en `dist/` |
+| `npm run preview` | Sirve lo compilado, para verificar el build |
+| `npm run lint` | Revisa el código con ESLint |
+
+## Variables de entorno
+
+| Variable | Para qué | Valor en desarrollo |
+|---|---|---|
+| `VITE_API_URL` | URL base de la API REST | `http://localhost:8000` |
+| `VITE_WS_URL` | URL base de los WebSockets | `ws://localhost:8000` |
+
+El prefijo `VITE_` es obligatorio: Vite sólo expone al navegador las variables que lo llevan.
+
+El archivo `.env` no se sube al repositorio. Se usa `.env.example` como plantilla.
+
+
+
+## Comunicación con el backend
+
+| Canal | Para qué |
+|---|---|
+| **HTTP** | Autenticación, plantel, comportamientos, ligas y amistosos |
+| **WebSocket** | Partido en vivo, lobby de liga y sala de amistoso |
+
+
+## Problemas frecuentes
+
+**Errores de CORS en la consola del navegador**
+El backend no está autorizando este origen. Verificar que `CORS_ORIGINS` en el `.env` del backend incluya `http://localhost:5173`.
+
+**`Failed to fetch` o `ERR_CONNECTION_REFUSED`**
+El backend no está corriendo, o `VITE_API_URL` apunta al puerto equivocado.
+
+**Cambié el `.env` y no toma los valores nuevos**
+Vite lee las variables de entorno al arrancar. Hay que reiniciar `npm run dev`.
+
+**El WebSocket se cierra apenas se conecta**
+El token es inválido o falta. El navegador no permite enviar el header `Authorization` en un WebSocket, por eso el token viaja como query param (`?token=...`).
+
+**El puerto 5173 está ocupado**
+
+```bash
+npm run dev -- --port 5174
+```
+
+Si se cambia el puerto, hay que agregar el nuevo origen a `CORS_ORIGINS` en el backend.
