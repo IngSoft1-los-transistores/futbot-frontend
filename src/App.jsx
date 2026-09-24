@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import EstadoBackend from './components/EstadoBackend'
 import heroImg from './assets/hero.png'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
@@ -9,6 +10,9 @@ function App() {
 
   return (
     <>
+      {/* Verifica el circuito frontend -> backend -> base de datos. */}
+      <EstadoBackend />
+
       <section id="center">
         <div className="hero">
           <img src={heroImg} className="base" width="170" height="179" alt="" />

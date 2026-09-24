@@ -99,6 +99,8 @@ El archivo `.env` no se sube al repositorio. Se usa `.env.example` como plantill
 **Errores de CORS en la consola del navegador**
 El backend no está autorizando este origen. Verificar que `CORS_ORIGINS` en el `.env` del backend incluya `http://localhost:5173`.
 
+Antes de tocar el `.env` del backend, **mirar en qué puerto arrancó Vite**: si el 5173 está ocupado (por ejemplo por otra instancia que quedó abierta), Vite salta al 5174 sin más aviso que su propia línea `Local:`. El backend sólo autoriza el 5173, así que todas las peticiones fallan con un error de CORS que parece un problema del backend y no lo es. La solución es cerrar la instancia vieja y levantar de nuevo en el 5173, no agregar el 5174 a `CORS_ORIGINS`.
+
 **`Failed to fetch` o `ERR_CONNECTION_REFUSED`**
 El backend no está corriendo, o `VITE_API_URL` apunta al puerto equivocado.
 
