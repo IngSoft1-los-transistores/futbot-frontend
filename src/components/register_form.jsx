@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { registerUser } from '../api/client';
+import {registerUser} from '../api/auth';
 
 function RegisterForm() {
   const [formulario, setFormulario] = useState({
@@ -13,7 +13,7 @@ function RegisterForm() {
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
 
-  function manejarCambio(evento) {
+  function handleInputChange(evento) {
     const { name, value } = evento.target;
 
     setFormulario({
@@ -27,8 +27,16 @@ function RegisterForm() {
     setMensaje('');
     setError('');
 
+    const payload   = {
+        username: formulario.username,
+        email: formulario.email,
+        password: formulario.password,
+        club_name: formulario.clubName,
+        avatar_url: formulario.avatar,
+    };
+
     try {
-      await registerUser(formulario);
+      const response = await registerUser(payload);
       setMensaje('Usuario registrado correctamente');
 
       setFormulario({
@@ -62,7 +70,7 @@ function RegisterForm() {
                 name="username"
                 type="text" 
                 value={formulario.username}
-                onChange={manejarCambio}
+                onChange={handleInputChange}
                 placeholder="nombre_de_usuario" 
                 className="input-field" 
                 required
@@ -78,7 +86,7 @@ function RegisterForm() {
                 name="email"
                 type="email" 
                 value={formulario.email}
-                onChange={manejarCambio}
+                onChange={handleInputChange}
                 placeholder="nombre@club.com" 
                 className="input-field" 
                 required
@@ -97,7 +105,7 @@ function RegisterForm() {
                 name="clubName"
                 type="text" 
                 value={formulario.clubName}
-                onChange={manejarCambio}
+                onChange={handleInputChange}
                 placeholder="Nombre de tu club" 
                 className="input-field" 
                 required
@@ -113,7 +121,7 @@ function RegisterForm() {
                 name="password"
                 type="password" 
                 value={formulario.password}
-                onChange={manejarCambio}
+                onChange={handleInputChange}
                 placeholder="••••••••" 
                 className="input-field" 
                 required
