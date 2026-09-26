@@ -1,4 +1,5 @@
 // import { useState } from 'react'
+import EstadoBackend from './components/EstadoBackend'
 import './App.css'
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
@@ -24,6 +25,8 @@ const Register = () => <h2>Pantalla de Registro </h2>;
             <Route path="/auth/register" element={<Register />} />
           </Routes>
         </div>
+      {/* Verifica el circuito frontend -> backend -> base de datos. */}
+      <EstadoBackend />
 
       </div>
     </BrowserRouter>
