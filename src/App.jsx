@@ -2,6 +2,7 @@
 import EstadoBackend from './components/EstadoBackend'
 import './App.css'
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import RegisterPage from './pages/register_page';
 
 const Navbar = () => (
   <nav id="top-bar">
@@ -11,7 +12,6 @@ const Navbar = () => (
 
 function App() {
 //  const [count, setCount] = useState(0)
-const Register = () => <h2>Pantalla de Registro </h2>;
 
   return (
     <BrowserRouter>
@@ -22,7 +22,7 @@ const Register = () => <h2>Pantalla de Registro </h2>;
         
         <div className="container mx-auto p-4">
           <Routes>
-            <Route path="/auth/register" element={<Register />} />
+            <Route path="/auth/register" element={<RegisterPage />} />
           </Routes>
         </div>
       {/* Verifica el circuito frontend -> backend -> base de datos. */}

@@ -1,3 +1,4 @@
+@import 'tailwindcss';
 /* Barra superior */
 #top-bar {
 box-sizing: border-box;
@@ -20,4 +21,18 @@ flex: none;
 order: 0;
 align-self: stretch;
 flex-grow: 0;
+}
+
+@layer components {
+  .label-futbot {
+    @apply block text-green-300 font-mono text-xs mb-2 uppercase;
+  }
+  
+  .input-container {
+    @apply bg-[#0f2217] border border-green-800 rounded-md p-3 flex items-center gap-3 focus-within:border-[#f0a95b] transition-colors;
+  }
+  
+  .input-field {
+    @apply bg-transparent border-none outline-none text-white w-full text-sm font-mono placeholder-green-800/60;
+  }
 }
