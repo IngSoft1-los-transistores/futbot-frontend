@@ -1,11 +1,15 @@
 import { useState } from 'react'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import EstadoBackend from './components/EstadoBackend'
 import heroImg from './assets/hero.png'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
+import FriendlyRoomPage from './pages/FriendlyRoomPage'
+import MatchPage from './pages/MatchPage'
+import './styles/tokens.css'
 import './App.css'
 
-function App() {
+function Home() {
   const [count, setCount] = useState(0)
 
   return (
@@ -120,6 +124,18 @@ function App() {
       <div className="ticks"></div>
       <section id="spacer"></section>
     </>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/amistosos/:roomId/sala" element={<FriendlyRoomPage />} />
+        <Route path="/partidos/:matchId" element={<MatchPage />} />
+        <Route path="*" element={<Home />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
