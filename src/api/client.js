@@ -2,6 +2,8 @@
  * Cliente HTTP del backend de FutBot.
 */
 
+import { getToken } from './token'
+
 // Vite solo expone al navegador las variables que empiezan con VITE_
 export const API_URL = import.meta.env.VITE_API_URL
 
@@ -21,10 +23,12 @@ export class ApiError extends Error {
  * @param {RequestInit} options Opciones de fetch (method, body, headers)
  */
 export async function request(path, options = {}) {
+  const token = getToken()
   const respuesta = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
     },
   })
