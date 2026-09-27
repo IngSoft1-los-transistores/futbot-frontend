@@ -6,8 +6,8 @@ function RegisterForm() {
     username: '',
     email: '',
     password: '',
-    clubName: '',
-    avatar: '',
+    club_name: '',
+    avatar_url: '',
   });
 
   const [mensaje, setMensaje] = useState('');
@@ -31,8 +31,8 @@ function RegisterForm() {
         username: formulario.username,
         email: formulario.email,
         password: formulario.password,
-        club_name: formulario.clubName,
-        avatar_url: formulario.avatar,
+        club_name: formulario.club_name,
+        avatar_url: formulario.avatar_url,
     };
 
     try {
@@ -43,8 +43,8 @@ function RegisterForm() {
         username: '',
         email: '',
         password: '',
-        clubName: '',
-        avatar: '',
+        club_name: '',
+        avatar_url: '',
       });
     } catch (error) {
       setError(error.message);
@@ -98,13 +98,13 @@ function RegisterForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Campo nombre del club */}
           <div>
-            <label htmlFor="clubName" className="label-futbot">Nombre del Club</label>
+            <label htmlFor="club_name" className="label-futbot">Nombre del Club</label>
             <div className="input-container">
               <input 
-                id="clubName"
-                name="clubName"
+                id="club_name"
+                name="club_name"
                 type="text" 
-                value={formulario.clubName}
+                value={formulario.club_name}
                 onChange={handleInputChange}
                 placeholder="Nombre de tu club" 
                 className="input-field" 
@@ -130,9 +130,9 @@ function RegisterForm() {
           </div>
         </div>
 
-        {/* Selector de Avatar */}
+        {/* Selector de avatar_url */}
         <div>
-          <label className="block text-green-300 font-mono text-xs mb-2 uppercase">Avatar</label>
+          <label className="block text-green-300 font-mono text-xs mb-2 uppercase">avatar_url</label>
           <div className="bg-[#0f2217] border border-green-800 rounded-md p-3 flex items-center justify-between">
             <div className="flex gap-2">
               {[1, 2, 3, 4, 5].map((num) => (
