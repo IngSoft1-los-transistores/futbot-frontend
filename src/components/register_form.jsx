@@ -103,8 +103,8 @@ function RegisterForm() {
       errors.password = 'La contraseña es obligatoria';
     } else if (password.length < 8) {
       errors.password = 'La contraseña debe tener al menos 8 caracteres';
-    } else if (password.length > 50) {
-      errors.password = 'La contraseña no puede superar los 50 caracteres';
+    } else if (password.length > 20) {
+      errors.password = 'La contraseña no puede superar los 20 caracteres';
     }
 
     return errors;
@@ -221,7 +221,7 @@ function RegisterForm() {
                 );
               })}
             </div>
-            
+
           </div>
         </div>
 
