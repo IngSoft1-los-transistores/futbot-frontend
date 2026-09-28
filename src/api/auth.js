@@ -9,6 +9,11 @@ export const registerUser = async (payload) => {
     body: JSON.stringify(payload), 
   });
 
+  if (response.status === 400) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Datos duplicados');
+  }
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.detail || 'Error al registrar el usuario');
