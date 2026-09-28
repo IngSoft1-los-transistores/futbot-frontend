@@ -11,7 +11,7 @@ function RegisterForm() {
     email: '',
     password: '',
     clubName: '',
-    avatar: '',
+    avatar: '1',
   });
 
   const [message, setMessage] = useState('');
@@ -191,16 +191,37 @@ function RegisterForm() {
 
         {/* Selector de avatar */}
         <div>
-          <label className="block text-green-300 font-mono text-xs mb-2 uppercase">avatar</label>
-          <div className="bg-[#0f2217] border border-green-800 rounded-md p-3 flex items-center justify-between">
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((num) => (
-                <button key={num} type="button" className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${num === 1 ? 'bg-[#f0a95b] text-black' : 'border border-green-700 text-green-600 hover:border-[#f0a95b]'}`}>
-                  {num}
-                </button>
-              ))}
+          <label className="block text-green-300 font-mono text-xs mb-2 uppercase">Selecciona tu Avatar</label>
+          <div className="bg-[#0f2217] border border-green-800 rounded-md p-4">
+            
+            {/* Usamos flex-wrap para que si no entran los 9 en una fila, bajen a la siguiente */}
+            <div className="flex flex-wrap gap-4 justify-center">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
+                const avatarId = num.toString();
+                const isSelected = form.avatar === avatarId;
+                
+                return (
+                  <button 
+                    key={avatarId} 
+                    type="button" 
+                    onClick={() => setForm({ ...form, avatar: avatarId })}
+                    className={`relative w-20 h-20 rounded-full overflow-hidden border-2 transition-all duration-200
+                      ${isSelected 
+                        ? 'border-[#f0a95b] scale-110 shadow-[0_0_12px_rgba(240,169,91,0.6)]'
+                        : 'border-green-900 hover:border-green-500 opacity-60 hover:opacity-100'
+                      }`}
+                  >
+                    {/* Busca la imagen en la carpeta public/avatars/ */}
+                    <img 
+                      src={`/avatars/${avatarId}.jpg`} 
+                      alt={`Avatar ${avatarId}`} 
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                );
+              })}
             </div>
-            <span className="text-green-600">→</span>
+            
           </div>
         </div>
 
