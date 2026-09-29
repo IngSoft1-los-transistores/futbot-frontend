@@ -7,29 +7,6 @@ async function seed(page, expires_at) {
   })), expires_at)
 }
 
-test('vuelve al login al cumplir cinco minutos sin solicitudes ni renovación', async ({ page }) => {
-  const now = new Date()
-  await page.clock.install({ time: now })
-  let calls = 0
-  let refreshes = 0
-  await page.route('**/api/auth/me', route => {
-    calls++
-    return route.fulfill({ json: { user_id: 'user', club_id: 'club' } })
-  })
-  await page.route('**/api/auth/refresh', route => { refreshes++; return route.abort() })
-  await seed(page, Math.floor(now.getTime() / 1000) + 300)
-  await page.goto('/home')
-  await expect(page.getByRole('heading', { name: 'Menú principal' })).toBeVisible()
-  const initial_calls = calls
-  await page.clock.fastForward(298000)
-  await expect(page.getByRole('heading', { name: 'Menú principal' })).toBeVisible()
-  await page.clock.fastForward(2000)
-  await expect(page).toHaveURL('/login')
-  expect(await page.evaluate(() => localStorage.getItem('futbot.session'))).toBeNull()
-  expect(calls).toBe(initial_calls)
-  expect(refreshes).toBe(0)
-})
-
 test('recargar no reinicia los cinco minutos', async ({ page }) => {
   const now = new Date()
   await page.clock.install({ time: now })

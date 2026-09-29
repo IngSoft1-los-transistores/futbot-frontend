@@ -121,6 +121,15 @@ Si se cambia el puerto, hay que agregar el nuevo origen a `CORS_ORIGINS` en el b
 ### Pruebas de interfaz
 
 ```bash
+### requiere node.js 20 o mayor para instalar playwright.
+node -v
+
+### en caso de tener una version menor que 20
+
+sudo apt remove nodejs
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+
 npx playwright install chromium
 npm run test:e2e
 ```
