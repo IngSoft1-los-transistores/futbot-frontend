@@ -56,7 +56,7 @@ function RegisterForm() {
 
       // Esperamos 2 segundos para que el usuario lea el message y redirigimos a la página de inicio
       setTimeout(() => {
-        navigate('/home'); 
+        navigate('/auth/login'); 
       }, 2000);
 
     } catch (error) {
