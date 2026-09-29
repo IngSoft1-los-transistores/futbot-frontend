@@ -117,3 +117,11 @@ npm run dev -- --port 5174
 ```
 
 Si se cambia el puerto, hay que agregar el nuevo origen a `CORS_ORIGINS` en el backend.
+
+### Pruebas de interfaz
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
