@@ -50,3 +50,4 @@ export async function request(path, options = {}) {
 export function getHealth() {
   return request('/api/health')
 }
+
