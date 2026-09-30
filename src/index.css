@@ -1,4 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-plex-sans: 'IBM Plex Sans', sans-serif;
+  --font-plex-mono: 'IBM Plex Mono', monospace;
+}
 
 :root {
   font-family: system-ui, sans-serif;
