@@ -32,11 +32,11 @@ function App() {
   return (
     <BrowserRouter>
       {/* Defino la imagen de fondo */}
-      <div className="bg-[url('/BackFutBot.png')]  bg-cover bg-center bg-no-repeat min-h-screen w-full text-white font-sans">
+      <div className="bg-[url('/BackFutBot.png')]  bg-cover bg-center bg-no-repeat min-h-dvh w-full flex flex-col text-white font-sans">
         
         <Navbar /> 
         
-        <div className="container mx-auto p-4">
+        <div className="container mx-auto p-4 flex-1 flex flex-col">
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/home" element={<Home />} />

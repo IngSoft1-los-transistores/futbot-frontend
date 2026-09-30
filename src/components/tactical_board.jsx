@@ -27,7 +27,7 @@ function TacticalBoard() {
   return (
     <div
       data-testid="tactical-board"
-      className="relative h-full min-h-[560px] bg-gradient-to-b from-[#20563a] to-[#123a23]"
+      className="relative h-full min-h-[480px] bg-gradient-to-b from-[#20563a] to-[#123a23]"
     >
       {/* Pitch lines */}
       <div className={`absolute inset-x-[10%] top-[7%] bottom-[7%] border ${LINE}`}>

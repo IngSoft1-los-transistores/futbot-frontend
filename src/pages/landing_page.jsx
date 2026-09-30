@@ -46,7 +46,7 @@ function ShieldIcon() {
   );
 }
 
-const ENTRY_LINK = 'mt-3 h-[54px] px-5 flex items-center gap-3 rounded font-plex-mono text-sm font-bold tracking-wider uppercase transition-colors';
+const ENTRY_LINK = 'mt-auto h-[54px] px-5 flex items-center gap-3 rounded font-plex-mono text-sm font-bold tracking-wider uppercase transition-colors';
 
 function LandingPage() {
   if (read_session()) {
@@ -54,10 +54,10 @@ function LandingPage() {
   }
 
   return (
-    <div className="mt-7 flex flex-col md:flex-row w-full rounded-2xl overflow-hidden shadow-2xl border border-[#123a23]">
+    <div className="mt-3 flex-1 flex flex-col md:flex-row w-full rounded-2xl overflow-hidden shadow-2xl border border-[#123a23]">
 
       {/* Welcome */}
-      <section className="w-full md:w-[52%] bg-[#0c2615] px-8 md:px-14 py-14 flex flex-col">
+      <section className="w-full md:w-[52%] bg-[#0c2615] px-8 md:px-14 py-10 flex flex-col">
         <p className="flex items-center gap-3 text-[#e09a4b] font-plex-mono text-[11px] tracking-widest uppercase">
           <span className="w-7 border-t-2 border-[#e09a4b]" aria-hidden="true" />
           El club táctico de FutBot
@@ -69,19 +69,19 @@ function LandingPage() {
           Prepara formaciones, programa cada movimiento y dirige tu equipo desde un vestuario hecho para estrategas.
         </p>
 
-        <div className="mt-auto pt-16">
+        <div className="mt-auto pt-8">
           <p className="font-plex-mono text-[11px] tracking-widest uppercase text-[#d8dccf]">
             Elige cómo entrar al terreno de juego
           </p>
           <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <p className="font-plex-mono text-[11px] text-[#a8b8a8]">¿Ya tienes club? Retoma tu estrategia.</p>
+            <div className="flex flex-col">
+              <p className="mb-3 font-plex-mono text-[11px] text-[#a8b8a8]">¿Ya tienes club? Retoma tu estrategia.</p>
               <Link to="/login" className={`${ENTRY_LINK} bg-[#e09a4b] text-[#0c2615] hover:bg-[#eaa95e]`}>
                 <LoginIcon /> Iniciar sesión <ArrowIcon />
               </Link>
             </div>
-            <div>
-              <p className="font-plex-mono text-[11px] text-[#a8b8a8]">¿Nuevo fichaje? Crea tu vestuario.</p>
+            <div className="flex flex-col">
+              <p className="mb-3 font-plex-mono text-[11px] text-[#a8b8a8]">¿Nuevo fichaje? Crea tu vestuario.</p>
               <Link to="/auth/register" className={`${ENTRY_LINK} border border-[#e09a4b] text-white hover:bg-[#e09a4b]/10`}>
                 <UserPlusIcon /> Crear cuenta <ArrowIcon />
               </Link>
@@ -89,7 +89,7 @@ function LandingPage() {
           </div>
         </div>
 
-        <footer className="mt-36 pt-5 border-t border-[#1f3d29] flex justify-between gap-4 font-plex-mono text-[10px] tracking-wider uppercase text-[#8a9a8a]">
+        <footer className="mt-10 pt-5 border-t border-[#1f3d29] flex justify-between gap-4 font-plex-mono text-[10px] tracking-wider uppercase text-[#8a9a8a]">
           <span className="flex items-center gap-2"><ShieldIcon /> Conexión cifrada · Datos protegidos</span>
           <span>Temporada 04 / 2026</span>
         </footer>
