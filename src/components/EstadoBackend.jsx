@@ -1,28 +1,28 @@
 import { useEffect, useState } from 'react'
-import { API_URL, getHealth } from '../api/client'
+import { API_URL, get_health } from '../api/client'
 
 
 // Indicador del estado de la conexion con el backend y su base de datos.
 // El endpoint /api/health ejecuta una consulta real contra la base.
 function EstadoBackend() {
-  const [conectado, setConectado] = useState(null)
-  const [detalle, setDetalle] = useState('')
+  const [conectado, set_conectado] = useState(null)
+  const [detalle, set_detalle] = useState('')
 
   useEffect(() => {
-    getHealth()
+    get_health()
       .then((salud) => {
-        setConectado(salud.database_connected)
-        setDetalle(
+        set_conectado(salud.database_connected)
+        set_detalle(
           salud.database_connected
             ? 'API y base de datos respondiendo'
             : 'La API responde pero la base no',
         )
       })
       .catch((error) => {
-        setConectado(false)
-        setDetalle(
+        set_conectado(false)
+        set_detalle(
           error.status
-            ? `${error.errorCode}: ${error.message}`
+            ? `${error.error_code}: ${error.message}`
             : 'No se pudo contactar al backend (revisar que este levantado y el CORS)',
         )
       })

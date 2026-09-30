@@ -117,3 +117,31 @@ npm run dev -- --port 5174
 ```
 
 Si se cambia el puerto, hay que agregar el nuevo origen a `CORS_ORIGINS` en el backend.
+
+### Pruebas de interfaz
+
+```bash
+### requiere node.js 20 o mayor para instalar playwright.
+node -v
+
+# instalacion de playwright
+npx playwright install chromium
+
+### en caso de tener una version menor que 20
+
+sudo apt remove nodejs
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+
+### correr el test
+
+npm run test:e2e
+```
+
+
+
+
+
+
+
+
