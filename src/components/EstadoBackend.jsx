@@ -11,9 +11,11 @@ function EstadoBackend() {
   useEffect(() => {
     getHealth()
       .then((salud) => {
-        setConectado(salud.database_connected)
+        const isDbOk = salud.database_connected ?? salud.databaseConnected ?? false;
+
+        setConectado(isDbOk)
         setDetalle(
-          salud.database_connected
+          isDbOk
             ? 'API y base de datos respondiendo'
             : 'La API responde pero la base no',
         )
