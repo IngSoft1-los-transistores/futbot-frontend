@@ -23,7 +23,7 @@ Este repositorio maneja únicamente la interacción con el usuario. Toda la lóg
 
 ## Requisitos previos
 
-- **Node.js 20 LTS o superior** — verificar con `node --version`
+- **Node.js 22 LTS o superior** — verificar con `node --version`
 - **npm** (viene con Node) — verificar con `npm --version`
 - **El backend corriendo** en `http://localhost:8000`
 
@@ -117,3 +117,31 @@ npm run dev -- --port 5174
 ```
 
 Si se cambia el puerto, hay que agregar el nuevo origen a `CORS_ORIGINS` en el backend.
+
+### Pruebas de interfaz
+
+```bash
+### requiere node.js 22 o mayor para instalar playwright.
+node -v
+
+# instalacion de playwright
+npx playwright install chromium
+
+### en caso de tener una version menor que 22
+
+sudo apt remove nodejs
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+
+### correr el test
+
+npm run test:e2e
+```
+
+
+
+
+
+
+
+

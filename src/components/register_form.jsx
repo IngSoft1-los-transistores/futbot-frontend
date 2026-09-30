@@ -43,7 +43,7 @@ function RegisterForm() {
     };
 
     try {
-      const response = await registerUser(payload);
+      await registerUser(payload);
       setMessage('Usuario registrado correctamente. Redirigiendo...');
 
       setForm({

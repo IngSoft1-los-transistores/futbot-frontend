@@ -5,3 +5,16 @@
   --font-plex-sans: 'IBM Plex Sans', sans-serif;
   --font-plex-mono: 'IBM Plex Mono', monospace;
 }
+
+:root {
+  font-family: system-ui, sans-serif;
+  color: #18372d;
+  background: #f0f5f2;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+#root { min-height: 100svh; }
+button, input { font: inherit; }

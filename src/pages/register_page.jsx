@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import RegisterForm from '../components/register_form';
 
 function RegisterPage() {
@@ -20,6 +21,9 @@ function RegisterPage() {
         {/* Formulario */}
         <div className="w-full md:w-7/12 bg-[#193625] p-10 flex flex-col justify-center">
           <RegisterForm />
+          <p className="auth-switch">
+            ¿Ya tenés cuenta? <Link to="/login">Iniciar sesión</Link>
+          </p>
         </div>
 
       </div>
