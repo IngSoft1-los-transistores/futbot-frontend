@@ -12,44 +12,56 @@ async function mock_auth(context, expired = false) {
 }
 
 test('conserva sesión vigente al cerrar el navegador y recuerda el logout', async ({ baseURL: base_url }, test_info) => {
+  // Este caso inicia y cierra Chromium tres veces con un perfil en disco.
+  // En un arranque en frío/WSL puede superar los 30 s del test completo.
+  test.slow()
   const profile = test_info.outputPath('browser-profile')
-  let context = await chromium.launchPersistentContext(profile)
-  try {
-    await mock_auth(context)
-    let page = await context.newPage()
-    await page.goto(`${base_url}/login`)
-    await page.getByLabel('Email').fill('user@example.com')
-    await page.getByLabel('Contraseña').fill('password')
-    await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
-    await expect(page.getByRole('heading', { name: 'Menú principal' })).toBeVisible()
-    await context.close()
 
-    context = await chromium.launchPersistentContext(profile)
-    await mock_auth(context)
-    let refresh_count = 0
-    await context.route('**/api/auth/refresh', route => {
-      refresh_count++
-      expect(route.request().postDataJSON()).toEqual({ refresh_token: 'old-refresh' })
-      return route.fulfill({ status: 401, json: { detail: 'Deshabilitado' } })
-    })
-    page = await context.newPage()
-    await page.goto(`${base_url}/`)
-    await expect(page.getByRole('heading', { name: 'Menú principal' })).toBeVisible()
-    expect(refresh_count).toBe(0)
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('futbot.session')))).toEqual(session)
-    await page.getByRole('button', { name: 'Cerrar sesión' }).click()
-    await expect(page).toHaveURL(`${base_url}/login`)
-    await context.close()
-
-    context = await chromium.launchPersistentContext(profile)
-    await mock_auth(context)
-    page = await context.newPage()
-    await page.goto(`${base_url}/home`)
-    await expect(page).toHaveURL(`${base_url}/login`)
-    expect(await page.evaluate(() => localStorage.getItem('futbot.session'))).toBeNull()
-  } finally {
-    await context.close()
+  async function with_browser(action) {
+    const context = await chromium.launchPersistentContext(profile)
+    try {
+      await mock_auth(context)
+      const page = context.pages()[0]
+      await action(page, context)
+    } finally {
+      await context.close()
+    }
   }
+
+  await test.step('Iniciar sesión y cerrar el navegador guardando el perfil', async () => {
+    await with_browser(async page => {
+      await page.goto(`${base_url}/login`)
+      await page.getByLabel('Email').fill('user@example.com')
+      await page.getByLabel('Contraseña').fill('password')
+      await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
+      await expect(page.getByRole('heading', { name: 'Menú principal' })).toBeVisible()
+    })
+  })
+
+  await test.step('Reabrir con la sesión vigente y cerrar sesión', async () => {
+    await with_browser(async (page, context) => {
+      let refresh_count = 0
+      await context.route('**/api/auth/refresh', route => {
+        refresh_count++
+        expect(route.request().postDataJSON()).toEqual({ refresh_token: 'old-refresh' })
+        return route.fulfill({ status: 401, json: { detail: 'Deshabilitado' } })
+      })
+      await page.goto(`${base_url}/`)
+      await expect(page.getByRole('heading', { name: 'Menú principal' })).toBeVisible()
+      expect(refresh_count).toBe(0)
+      expect(await page.evaluate(() => JSON.parse(localStorage.getItem('futbot.session')))).toEqual(session)
+      await page.getByRole('button', { name: 'Cerrar sesión' }).click()
+      await expect(page).toHaveURL(`${base_url}/login`)
+    })
+  })
+
+  await test.step('Reabrir y comprobar que el logout sigue vigente', async () => {
+    await with_browser(async page => {
+      await page.goto(`${base_url}/home`)
+      await expect(page).toHaveURL(`${base_url}/login`)
+      expect(await page.evaluate(() => localStorage.getItem('futbot.session'))).toBeNull()
+    })
+  })
 })
 
 test('dos pestañas comparten la sesión y ambas reflejan el logout', async ({ page, context }) => {
