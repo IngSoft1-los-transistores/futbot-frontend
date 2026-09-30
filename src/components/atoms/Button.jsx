@@ -18,7 +18,7 @@ function Button({
       {...props}
     >
       {isLoading && <Spinner />}
-      {children}
+      <span className="fb-button__content">{children}</span>
     </button>
   )
 }

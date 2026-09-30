@@ -18,7 +18,7 @@ const STATUS_CHIPS = {
 }
 
 const ERROR_MESSAGES = {
-  INVALID_TOKEN: 'Tu sesión no es válida. Iniciá sesión nuevamente.',
+  UNAUTHORIZED: 'Tu sesión no es válida o venció. Iniciá sesión nuevamente.',
   ROOM_NOT_FOUND: 'La sala no existe.',
   NOT_ROOM_MEMBER: 'Tu club no pertenece a esta sala.',
   ROOM_NOT_FULL: 'Falta que otro club se una a la sala.',
@@ -84,7 +84,7 @@ function FriendlyRoomPage() {
         isLoading={isStarting}
       >
         {!isStarting && <Icon name="play" />}
-        {label}
+        <span key={label}>{label}</span>
       </Button>
     )
   }

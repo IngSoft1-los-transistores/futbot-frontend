@@ -18,7 +18,7 @@ function PlayerRow({ number, player, side }) {
       <span className="fb-player-row__behavior">
         <Chip>
           <Icon name="code" size={12} />
-          {player.behavior_name}
+          <span translate="no">{player.behavior_name}</span>
         </Chip>
       </span>
     </li>

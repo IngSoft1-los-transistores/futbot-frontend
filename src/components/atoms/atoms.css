@@ -15,6 +15,12 @@
   cursor: pointer;
 }
 
+.fb-button__content {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .fb-button--primary {
   background: var(--fb-accent);
   color: var(--fb-accent-ink);
