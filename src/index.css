@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   font-family: system-ui, sans-serif;
   color: #18372d;
@@ -8,5 +10,5 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
-#root { min-height: 100svh; display: grid; place-items: center; padding: 24px; }
+#root { min-height: 100svh; }
 button, input { font: inherit; }

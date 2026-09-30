@@ -98,3 +98,4 @@ export function login({ email, password }) {
 export function get_current_user(options = {}) {
   return request('/api/auth/me', options)
 }
+

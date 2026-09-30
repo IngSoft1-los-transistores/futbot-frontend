@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { login } from '../api/client'
 import { read_session, save_session } from '../auth/session'
 
@@ -64,6 +64,9 @@ export default function Login() {
           {status === 'loading' ? 'Iniciando sesión…' : status === 'success' ? 'Sesión iniciada' : 'Iniciar sesión'}
         </button>
       </form>
+      <p className="auth-switch">
+        ¿No tenés cuenta? <Link to="/auth/register">Crear cuenta</Link>
+      </p>
     </main>
   )
 }
