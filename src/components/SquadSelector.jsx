@@ -4,8 +4,8 @@ export default function SquadSelector({ players, behaviors, squad, setSquad}) {
 
     // Obtiene los ids de los jugadores elegidos para evitar duplicados
     const getSelectedPlayersIds = () => {
-        const starterIds = squad.starters.map((s) => s.playerId).filter(Boolean);
-        const substituteIds = squad.substitutes.map((s) => s.playerId).filter(Boolean);
+        const starterIds = squad.starters.map((s) => String(s.playerId)).filter(Boolean);
+        const substituteIds = squad.substitutes.map((s) => String(s.playerId)).filter(Boolean);
         return[...starterIds, ...substituteIds];
     };
 
@@ -21,58 +21,60 @@ export default function SquadSelector({ players, behaviors, squad, setSquad}) {
         const currentSlot = squad[type][index];
 
         return (
-          <div key={`${type}-${index}`} className="slot-card p-3 border rounded mb-3 bg-light">
-            <h6 className="fw-bold">{label} {index + 1}</h6>
-            <div className="row g-2">
-              {/* Selección de Jugador */}
-              <div className="col-md-6">
-                <label className="form-label text-muted small">Jugador</label>
-                <select
-                  className="form-select"
-                  value={currentSlot.playerId}
-                  onChange={(e) => handleSelectionChange(type, index, 'playerId', e.target.value)}
-                >
-                  <option value="">-- Seleccionar Jugador --</option>
-                  {players.map((p) => {
-                    const isSelectedElsewhere =
-                      selectedIds.includes(p.id) && p.id !== currentSlot.playerId;
-                    return (
-                      <option key={p.id} value={p.id} disabled={isSelectedElsewhere}>
-                        {p.name} {isSelectedElsewhere ? '(Seleccionado)' : ''}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
+      <div key={`${type}-${index}`} className="slot-card p-3 border rounded mb-3 bg-light">
+        <h6 className="fw-bold">{label} {index + 1}</h6>
+        <div className="row g-2">
+          {/* Selección de Jugador */}
+          <div className="col-md-6">
+            <label className="form-label text-muted small">Jugador</label>
+            <select
+              className="form-select"
+              value={currentSlot.playerId}
+              onChange={(e) => handleSelectionChange(type, index, 'playerId', e.target.value)}
+            >
+              <option value="">-- Seleccionar Jugador --</option>
+              {players.map((p) => {
+                const playerIdStr = String(p.id);
+                const isSelectedElsewhere =
+                  selectedIds.includes(playerIdStr) && playerIdStr !== String(currentSlot.playerId);
 
-              {/* Selección de Comportamiento */}
-              <div className="col-md-6">
-                <label className="form-label text-muted small">Comportamiento</label>
-                <select
-                  className="form-select"
-                  value={currentSlot.behaviorId}
-                  onChange={(e) => handleSelectionChange(type, index, 'behaviorId', e.target.value)}
-                >
-                  <option value="">-- Seleccionar Estrategia --</option>
-                  {behaviors.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} {b.is_preprogrammed ? '(Preprogramado)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+                return (
+                  <option key={p.id} value={p.id} disabled={isSelectedElsewhere}>
+                    {p.name} {isSelectedElsewhere ? '(Seleccionado)' : ''}
+                  </option>
+                );
+              })}
+            </select>
           </div>
-        );
-    };
 
-    return (
-        <div className="squad-selector">
-          <h5 className="text-primary mb-3">Titulares (3 requeridos)</h5>
-          {[0, 1, 2].map((i) => renderSlot('starters', i, 'Titular'))}
-
-          <h5 className="text-primary mb-3 mt-4">Suplentes (3 requeridos)</h5>
-          {[0, 1, 2].map((i) => renderSlot('substitutes', i, 'Suplente'))}
+          {/* Selección de Comportamiento */}
+          <div className="col-md-6">
+            <label className="form-label text-muted small">Comportamiento</label>
+            <select
+              className="form-select"
+              value={currentSlot.behaviorId}
+              onChange={(e) => handleSelectionChange(type, index, 'behaviorId', e.target.value)}
+            >
+              <option value="">-- Seleccionar Estrategia --</option>
+              {behaviors.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name} {b.is_preprogrammed ? '(Preprogramado)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+      </div>
     );
+  };
+
+  return (
+    <div className="squad-selector">
+      <h5 className="text-primary mb-3">Titulares (3 requeridos)</h5>
+      {[0, 1, 2].map((i) => renderSlot('starters', i, 'Titular'))}
+
+      <h5 className="text-primary mb-3 mt-4">Suplentes (3 requeridos)</h5>
+      {[0, 1, 2].map((i) => renderSlot('substitutes', i, 'Suplente'))}
+    </div>
+  );
 }

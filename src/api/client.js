@@ -8,10 +8,11 @@ export const API_URL = import.meta.env.VITE_API_URL
 // Error de la API con el formato que define el contrato.
 export class ApiError extends Error {
   constructor(status, detail, errorCode) {
-    super(detail)
-    this.name = 'ApiError'
-    this.status = status
-    this.errorCode = errorCode
+    super(typeof detail === 'string' ? detail: 'Error de validacion')
+    this.name = 'ApiError';
+    this.status = status;
+    this.detail = detail;
+    this.errorCode = errorCode;
   }
 }
 

@@ -1,37 +1,57 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// src/api/friendly.js
+import { API_URL, request } from './client';
 
 export async function createFriendlyRoom(squadData, token) {
-    const response = await fetch(`${API_URL}/api/friendly/rooms`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(squadData),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.detail || 'Error al crear la sala de amistoso');
-    }
-
-    return data;
+  return request('/api/friendly/rooms', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(squadData),
+  });
 }
 
-// Funciones auxiliares para obtener la lista de jugadores y comportamientos del usuario
+// Datos de prueba para desarrollo local cuando el backend da 404
+const MOCK_PLAYERS = [
+  { id: '1', name: 'Delantero Rayo' },
+  { id: '2', name: 'Mediocampista Muro' },
+  { id: '3', name: 'Defensor Roca' },
+  { id: '4', name: 'Arquero Pulpo' },
+  { id: '5', name: 'Extremo Veloz' },
+  { id: '6', name: 'Pivote Estático' },
+];
+
+const MOCK_BEHAVIORS = [
+  { id: '1', name: 'Ataque Agresivo', is_preprogrammed: true },
+  { id: '2', name: 'Defensa Bajas', is_preprogrammed: true },
+  { id: '3', name: 'Contraataque Rápido', is_preprogrammed: false },
+  { id: '4', name: 'Posesión y Pase', is_preprogrammed: false },
+];
+
 export async function getMyPlayers(token) {
-    const response = await fetch(`${API_URL}/api/players/me`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+  try {
+    return await request('/api/players/me', {
+      headers: { 'Authorization': `Bearer ${token}` },
     });
-    if (!response.ok) throw new Error('Error al cargar jugadores');
-    return response.json();
+  } catch (error) {
+    if (error.status === 404) {
+      console.warn('Endpoint /api/players/me dio 404. Usando datos mock de jugadores.');
+      return MOCK_PLAYERS;
+    }
+    throw error;
+  }
 }
 
-export async function getMyBehaviors(token){
-    const response = await fetch(`${API_URL}/api/behaviors/me`, {
-        heraders: { 'Authorization': `Bearer ${token}` },
+export async function getMyBehaviors(token) {
+  try {
+    return await request('/api/behaviors/me', {
+      headers: { 'Authorization': `Bearer ${token}` },
     });
-    if (!response.ok) throw new Error('Error al cargar comportamientos');
-    return response.json();
+  } catch (error) {
+    if (error.status === 404) {
+      console.warn('Endpoint /api/behaviors/me dio 404. Usando datos mock de comportamientos.');
+      return MOCK_BEHAVIORS;
+    }
+    throw error;
+  }
 }

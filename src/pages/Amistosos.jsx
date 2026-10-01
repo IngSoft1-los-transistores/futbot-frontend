@@ -1,4 +1,3 @@
-
 // src/pages/Amistosos.jsx
 import React, { useState, useEffect } from 'react';
 import { createFriendlyRoom, getMyPlayers, getMyBehaviors } from '../api/friendly';
@@ -47,25 +46,46 @@ export default function Amistosos() {
     return squad.starters.every(isSlotValid) && squad.substitutes.every(isSlotValid);
   };
 
+  // src/pages/Amistosos.jsx
+
   const handleCreateFriendly = async () => {
-    setError(null);
-    setLoading(true);
+  setError(null);
+  setLoading(true);
 
-    const payload = {
-      starters: squad.starters.map((s) => ({ playerId: s.playerId, behaviorId: s.behaviorId })),
-      substitutes: squad.substitutes.map((s) => ({ playerId: s.playerId, behaviorId: s.behaviorId })),
-    };
-
-    try {
-      const roomData = await createFriendlyRoom(payload, token);
-      setCreatedRoom(roomData);
-      setShowConfig(false);
-    } catch (err) {
-      setError(err.message || 'No fue posible crear el amistoso.');
-    } finally {
-      setLoading(false);
-    }
+  // Garantizamos que player_id y behavior_id sean siempre tipos String para Pydantic
+  const payload = {
+    starters: squad.starters.map((s) => ({
+      player_id: String(s.playerId),
+      behavior_id: String(s.behaviorId),
+    })),
+    substitutes: squad.substitutes.map((s) => ({
+      player_id: String(s.playerId),
+      behavior_id: String(s.behaviorId),
+    })),
   };
+
+  try {
+    const roomData = await createFriendlyRoom(payload, token);
+    setCreatedRoom(roomData);
+    setShowConfig(false);
+  } catch (err) {
+    let errorMsg = 'No fue posible crear el amistoso.';
+
+    const detailObj = err.detail || err.message;
+
+    if (Array.isArray(detailObj)) {
+      errorMsg = detailObj
+        .map((e) => `Campo '${e.loc ? e.loc.join('.') : 'campo'}': ${e.msg}`)
+        .join(' | ');
+    } else if (typeof detailObj === 'string') {
+      errorMsg = detailObj;
+    }
+
+    setError(errorMsg);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="container mt-4">
@@ -73,15 +93,14 @@ export default function Amistosos() {
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {/* 1. Vista si la sala ya fue creada exitosamente */}
       {createdRoom ? (
         <div className="card border-success p-4 text-center shadow-sm">
           <h4 className="text-success mb-3">¡Amistoso Creado Exitosamente!</h4>
           <p className="mb-2">Comparte la siguiente información con tu rival:</p>
           
           <div className="bg-light p-3 rounded mb-3 border">
-            <div><strong>Código de Sala:</strong> <span className="fs-4 text-primary">{createdRoom.roomCode}</span></div>
-            <div><small className="text-muted">Room ID: {createdRoom.roomId}</small></div>
+            <div><strong>Código de Sala:</strong> <span className="fs-4 text-primary">{createdRoom.roomCode || createdRoom.room_code}</span></div>
+            <div><small className="text-muted">Room ID: {createdRoom.roomId || createdRoom.room_id}</small></div>
           </div>
 
           <div className="badge bg-warning text-dark p-2 mb-3 fs-6">
@@ -101,7 +120,6 @@ export default function Amistosos() {
           </div>
         </div>
       ) : (
-        /* 2. Botón inicial / Formulario de Configuración */
         <div>
           {!showConfig ? (
             <button
