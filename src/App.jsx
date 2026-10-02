@@ -3,6 +3,9 @@ import Login from './pages/Login'
 import Home from './pages/Home'
 import RegisterPage from './pages/register_page'
 import LandingPage from './pages/landing_page'
+import FriendlyRoomPage from './pages/FriendlyRoomPage'
+import MatchPage from './pages/MatchPage'
+import './styles/tokens.css'
 import './App.css'
 
 const Navbar = () => (
@@ -60,6 +63,8 @@ export default function App() {
         <Route path="/auth/login" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/amistosos/:roomId/sala" element={<FriendlyRoomPage />} />
+        <Route path="/partidos/:matchId" element={<MatchPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
