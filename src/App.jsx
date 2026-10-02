@@ -3,6 +3,7 @@ import Login from './pages/Login'
 import Home from './pages/Home'
 import RegisterPage from './pages/register_page'
 import LandingPage from './pages/landing_page'
+import BehaviorPage from './pages/behavior_page'
 import './App.css'
 
 const Navbar = () => (
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="/auth/login" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<div className="auth-layout"><Login /></div>} />
         <Route path="/home" element={<div className="auth-layout"><Home /></div>} />
+        <Route path="/behaviors" element={<div className="auth-layout"><BehaviorPage /></div>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
