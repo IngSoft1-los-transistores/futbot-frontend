@@ -27,14 +27,10 @@ export default function BehaviorPage() {
                 set_behavior_list(behaviors)
                 set_status('ready')
             } catch (error) {
-                if (error.message === '401') {
-                    set_error('Sesión no válida. Por favor, inicia sesión de nuevo.')
-                    localStorage.removeItem('futbot.session') // Limpiamos por las dudas
-                    navigate('/login', { replace: true })
-                } else {
-                    set_error('Error al obtener los comportamientos. Por favor, inténtalo de nuevo.')
-                    set_status('error')
-                }
+                // EL manejo del error 401 lo hace client.js 
+                console.error('Error en la petición:', error)
+                set_error('Error al obtener los comportamientos. Por favor, inténtalo de nuevo.')
+                set_status('error')
             }
         }
         fetch_behaviors()
