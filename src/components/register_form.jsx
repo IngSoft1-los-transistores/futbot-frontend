@@ -43,7 +43,7 @@ function RegisterForm() {
     };
 
     try {
-      const response = await registerUser(payload);
+      await registerUser(payload);
       setMessage('Usuario registrado correctamente. Redirigiendo...');
 
       setForm({
@@ -56,7 +56,7 @@ function RegisterForm() {
 
       // Esperamos 2 segundos para que el usuario lea el message y redirigimos a la página de inicio
       setTimeout(() => {
-        navigate('/auth/login'); 
+        navigate('/login'); 
       }, 2000);
 
     } catch (error) {
@@ -119,7 +119,7 @@ function RegisterForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           {/* Campo de Usuario  */}
           <div>
             <label htmlFor="username" className="label-futbot">Nombre de usuario</label>
@@ -154,7 +154,7 @@ function RegisterForm() {
           </div>
         </div>
         {/* Segunda Fila */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
         {/* Campo nombre del club */}
           <div>
             <label htmlFor="clubName" className="label-futbot">Nombre del Club</label>

@@ -30,7 +30,7 @@ const ERROR_MESSAGES = {
 
 function errorMessage(error, fallback) {
   if (!error?.status) return 'No se pudo contactar al servidor.'
-  return ERROR_MESSAGES[error.errorCode] ?? fallback
+  return ERROR_MESSAGES[error.error_code] ?? fallback
 }
 
 function FriendlyRoomPage() {
