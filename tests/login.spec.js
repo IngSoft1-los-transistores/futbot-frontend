@@ -18,7 +18,7 @@ const credentials = { email: 'manager@example.com', password: ' Mi clave secreta
 async function fill_login(page) {
   await page.goto('/login')
   await page.getByLabel('Email').fill(credentials.email)
-  await page.getByLabel('Contraseña').fill(credentials.password)
+  await page.getByLabel('Contraseña', { exact: true }).fill(credentials.password)
 }
 
 async function stored_session(page) {
@@ -36,9 +36,9 @@ test('impide enviar campos vacíos y un email inválido', async ({ page }) => {
   await expect(page.getByLabel('Email')).toBeFocused()
   await page.getByLabel('Email').fill('manager@example.com')
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
-  await expect(page.getByLabel('Contraseña')).toBeFocused()
+  await expect(page.getByLabel('Contraseña', { exact: true })).toBeFocused()
   await page.getByLabel('Email').fill('email-invalido')
-  await page.getByLabel('Contraseña').fill('clave')
+  await page.getByLabel('Contraseña', { exact: true }).fill('clave')
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
   await expect(page.getByLabel('Email')).toBeFocused()
   expect(requests).toHaveLength(0)
@@ -93,7 +93,7 @@ test('bloquea el formulario mientras espera al servidor', async ({ page }) => {
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Iniciando sesión…' })).toBeDisabled()
   await expect(page.getByLabel('Email')).toBeDisabled()
-  await expect(page.getByLabel('Contraseña')).toBeDisabled()
+  await expect(page.getByLabel('Contraseña', { exact: true })).toBeDisabled()
   respond()
   await expect(page).toHaveURL('/home')
 })
@@ -185,4 +185,30 @@ test('conserva la sesión persistente y verifica el usuario al recargar', async 
   await expect(page).toHaveURL('/home')
   await expect(page.getByRole('heading', { name: 'Menú principal' })).toBeVisible()
   expect(await stored_session(page)).toEqual(session)
+})
+
+test('permite mostrar y ocultar la contraseña sin enviar el formulario', async ({ page }) => {
+  await fill_login(page)
+  await page.getByRole('button', { name: 'Mostrar contraseña', exact: true }).click()
+  await expect(page.getByLabel('Contraseña', { exact: true })).toHaveAttribute('type', 'text')
+  await expect(page.getByLabel('Contraseña', { exact: true })).toHaveValue(credentials.password)
+  await page.getByRole('button', { name: 'Ocultar contraseña', exact: true }).click()
+  await expect(page.getByLabel('Contraseña', { exact: true })).toHaveAttribute('type', 'password')
+  expect(await stored_session(page)).toBeNull()
+})
+
+test('sin Recordarme conserva la sesión solo en la pestaña y la borra al salir', async ({ page }) => {
+  await page.route('**/api/auth/login', (route) => route.fulfill({ json: session }))
+  await fill_login(page)
+  await page.getByLabel('Recordarme').uncheck()
+  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Menú principal' })).toBeVisible()
+  expect(await stored_session(page)).toBeNull()
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('futbot.session')))).toEqual(session)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Menú principal' })).toBeVisible()
+  expect(await stored_session(page)).toBeNull()
+  await page.getByRole('button', { name: 'Cerrar sesión' }).click()
+  await expect(page).toHaveURL('/login')
+  expect(await page.evaluate(() => sessionStorage.getItem('futbot.session'))).toBeNull()
 })
