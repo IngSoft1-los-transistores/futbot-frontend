@@ -23,7 +23,6 @@ export default function BehaviorPage() {
             try {
                 // Hace la petición para obtener los comportamientos
                 const behaviors = await get_behaviors()
-                console.log("Lo que llega de la API:", behaviors)
                 set_behavior_list(behaviors)
                 set_status('ready')
             } catch (error) {
