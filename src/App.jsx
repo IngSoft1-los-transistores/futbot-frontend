@@ -1,19 +1,67 @@
-// src/App.jsx
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import EstadoBackend from './components/EstadoBackend'
-import Amistosos from './pages/Amistosos'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import Login from './pages/Login'
+import Home from './pages/Home'
+import RegisterPage from './pages/register_page'
+import LandingPage from './pages/landing_page'
 import './App.css'
 
-function App() {
+const Navbar = () => (
+  <nav id="top-bar">
+    <div className="flex items-center gap-3">
+      <span className="w-9 h-9 rounded-md bg-[#e09a4b] flex items-center justify-center" aria-hidden="true">
+        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9 9l6 6M15 9l-6 6" />
+        </svg>
+      </span>
+      <div>
+        <p className="font-plex-sans text-lg leading-tight">FutBot</p>
+        <p className="font-plex-mono text-[11px] text-[#b5c2b3]">laboratorio / presión alta v4</p>
+      </div>
+    </div>
+    <p className="flex items-center gap-2 font-plex-mono text-[10px] tracking-widest uppercase text-[#d8dccf]">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#7fae7f]" aria-hidden="true" />
+      Vestuario digital abierto
+    </p>
+  </nav>
+)
+
+function Landing() {
+  return (
+    <div className="bg-[url('/BackFutBot.png')] bg-cover bg-center bg-no-repeat min-h-screen w-full flex flex-col text-white font-sans">
+      <Navbar />
+      <div className="w-full max-w-7xl mx-auto p-4 flex-1 flex flex-col">
+        <LandingPage />
+      </div>
+    </div>
+  )
+}
+
+function Registration() {
+  return (
+    <div className="registration-layout bg-[url('/BackFutBot.png')] bg-cover bg-center bg-no-repeat text-white font-sans">
+      <nav id="top-bar">
+        <h1 className="text-2xl font-bold tracking-wider">⚽︎ Futbot</h1>
+      </nav>
+      <main className="w-full max-w-7xl mx-auto p-4 flex justify-center">
+        <RegisterPage />
+      </main>
+    </div>
+  )
+}
+
+export default function App() {
   return (
     <BrowserRouter>
-      <EstadoBackend />
       <Routes>
-        <Route path="/amistosos" element={<Amistosos />} />
-        {/* Podes agregar mas rutas cuando los otros devs las terminen */}
+        <Route path="/" element={<Landing />} />
+        <Route path="/register" element={<Registration />} />
+        <Route path="/auth/register" element={<Navigate to="/register" replace />} />
+        <Route path="/auth/login" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   )
 }
-
-export default App
