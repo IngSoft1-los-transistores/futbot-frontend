@@ -84,6 +84,15 @@ export default function Home() {
       {status === 'ready' && <>
         <h1>Menú principal</h1>
         <p className="intro">Bienvenido a tu club.</p>
+        <form className="match-entry" onSubmit={(event) => {
+          event.preventDefault()
+          const id = new FormData(event.currentTarget).get('match_id').trim()
+          if (id) navigate(`/matches/${encodeURIComponent(id)}`)
+        }}>
+          <label htmlFor="match_id">ID del partido</label>
+          <input id="match_id" name="match_id" required placeholder="Ingresá el ID del partido" />
+          <button type="submit">Ver partido</button>
+        </form>
       </>}
       {error && <p role="alert">{error}</p>}
       {status === 'error' && <>

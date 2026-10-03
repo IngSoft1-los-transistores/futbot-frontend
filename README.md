@@ -145,3 +145,27 @@ npm run test:e2e
 
 
 
+
+## Estado actual del partido
+
+Desde el menú principal se puede ingresar el ID de un partido, o abrir directamente
+`/matches/:match_id`. Requiere una sesión vigente y pertenecer a uno de sus clubes;
+el backend valida el acceso. Actualmente no existe un endpoint para descubrir el
+partido activo del usuario.
+
+La vista consulta `GET /api/matches/{match_id}/state` al entrar y un segundo después
+de terminar cada consulta. Usa el token de sesión, evita caché y consultas
+superpuestas, y cancela la petición al salir. El reloj, marcador, jugadores,
+posiciones, posesión, comportamientos y acciones provienen del snapshot del servidor;
+no se simula el avance del partido en el navegador. Las revisiones anteriores se
+ignoran y las consultas se detienen al finalizar.
+
+Ante errores temporales se conserva el último snapshot con una advertencia y se
+reintenta automáticamente. Un 409 espera la publicación inicial; 403, 404 y 422
+muestran un error y detienen las consultas; 401 redirige al login.
+
+El endpoint entrega únicamente las acciones del último tick, no un historial:
+el polling puede omitir acciones intermedias. Para garantizar la reproducción de
+todas las acciones se necesita soporte del backend para eventos con cursor o streaming.
+Las posiciones se muestran como coordenadas porque el contrato no define dimensiones
+de cancha. Los comportamientos se identifican por su ID, el dato disponible en el estado.

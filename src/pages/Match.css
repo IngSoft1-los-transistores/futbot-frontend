@@ -1,0 +1,27 @@
+.match-page { max-width: 1100px; margin: auto; padding: 24px; }
+.match-header { display: flex; justify-content: space-between; gap: 16px; color: #17633f; }
+.match-header a { text-decoration: underline; }
+.match-page h1 { font-size: 28px; font-weight: 700; margin: 28px 0 20px; }
+.match-page h2 { font-size: 20px; font-weight: 700; }
+.match-scoreboard { background: #0b2a16; color: #fff; border-radius: 16px; padding: 28px; text-align: center; }
+.match-status { color: #f0a95b; font-weight: 700; margin-bottom: 20px; }
+.match-score { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px; margin-bottom: 20px; }
+.match-score strong { font-size: 40px; white-space: nowrap; }
+.match-score h2 { overflow-wrap: anywhere; }
+.match-score small { display: block; font-size: 13px; font-weight: 400; color: #b5c2b3; }
+.match-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.match-panel { min-width: 0; padding: 24px; background: white; border: 1px solid #d3e1d9; border-radius: 12px; margin-top: 20px; }
+.match-panel h2 { margin-bottom: 12px; }
+.match-players li { display: grid; gap: 4px; padding: 12px 0; border-top: 1px solid #d3e1d9; overflow-wrap: anywhere; }
+.match-players small { color: #50655b; }
+.match-actions li { padding: 8px 0; }
+.match-warning { background: #fff0dc; color: #713e0b; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
+.match-entry { margin-bottom: 24px; }
+@media (max-width: 600px) {
+  .match-page { padding: 16px; }
+  .match-teams { grid-template-columns: 1fr; gap: 0; }
+  .match-score { gap: 12px; }
+  .match-score strong { font-size: 28px; }
+  .match-score h2 { font-size: 16px; }
+  .match-scoreboard { padding: 20px 12px; }
+}
