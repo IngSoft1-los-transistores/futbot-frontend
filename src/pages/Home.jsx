@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { get_current_user, logout as logout_session } from '../api/client'
 import { clear_session, read_session, save_session } from '../auth/session'
 import './Home.css'
+import JoinFriendlyModal from '../components/join_friendly_modal'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -10,6 +11,7 @@ export default function Home() {
   const [error, set_error] = useState('')
   const [attempt, set_attempt] = useState(0)
   const [closing, set_closing] = useState(false)
+  const [join_open, set_join_open] = useState(false)
 
   useEffect(() => {
     const session = read_session()
@@ -78,6 +80,12 @@ export default function Home() {
     }
   }
 
+  function join_friendly({ room_id, code }) {
+    set_join_open(false)
+    // El código funciona como contraseña: va en el state de la navegación, no en la URL
+    navigate('/friendly/join', { state: { room_id, code } })
+  }
+
   return (
     <div className="home-page">
       <header className="home-topbar">
@@ -108,9 +116,17 @@ export default function Home() {
           <section className="home-welcome" aria-labelledby="home-title">
             <h1 id="home-title">Menú principal</h1>
             <p>Bienvenido a tu club. Prepará tu equipo, diseñá tu estrategia y elegí tu próximo desafío.</p>
+            <button className="home-action" onClick={() => set_join_open(true)}>
+              Unirse a un amistoso
+            </button>
           </section>
         )}
       </main>
+       <JoinFriendlyModal
+        open={join_open}
+        on_close={() => set_join_open(false)}
+        on_submit={join_friendly}
+      />
     </div>
   )
 }

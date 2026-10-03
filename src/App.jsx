@@ -4,6 +4,7 @@ import Home from './pages/Home'
 import RegisterPage from './pages/register_page'
 import LandingPage from './pages/landing_page'
 import './App.css'
+import JoinFriendly from './pages/join_friendly'
 
 const Navbar = () => (
   <nav id="top-bar">
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="/auth/login" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/friendly/join" element={<JoinFriendly />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

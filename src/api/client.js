@@ -99,3 +99,34 @@ export function get_current_user(options = {}) {
   return request('/api/auth/me', options)
 }
 
+
+// AJUSTAR: rutas y forma de la respuesta de los listados
+function as_list(body, key) {
+  return Array.isArray(body) ? body : (body?.[key] ?? [])    // acepta [...] o { players: [...] }
+}
+
+// Jugadores creados por el club autenticado
+export async function list_players(options = {}) {
+  const body = await request('/api/players', options)
+  return as_list(body, 'players')
+}
+
+// Comportamientos disponibles (del club y preprogramados)
+export async function list_behaviors(options = {}) {
+  const body = await request('/api/behaviors/preprogrammed', options)     // temporal, dado que solo hay preprogramados por ahora
+  return as_list(body, 'behaviors')
+}
+
+// Une al club autenticado a un amistoso. Internamente usamos snake_case;
+// el contrato pide titulares, suplentes, playerId y behaviorId, y se convierten acá.
+export function join_friendly_room({ room_id, code, starters, substitutes }) {
+  const to_payload = ({ player_id, behavior_id }) => ({ playerId: player_id, behaviorId: behavior_id })
+  return request(`/api/friendly/rooms/${encodeURIComponent(room_id)}/join`, {
+    method: 'POST',
+    body: JSON.stringify({
+      code,
+      titulares: starters.map(to_payload),
+      suplentes: substitutes.map(to_payload),
+    }),
+  })
+}

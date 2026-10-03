@@ -169,3 +169,8 @@
 .home-content > .home-action {
   align-self: flex-start;
 }
+
+.home-welcome .home-action {
+  align-self: flex-start;
+  margin-top: 8px;
+}
