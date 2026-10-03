@@ -10,8 +10,8 @@ const STARTER_COUNT = 3
 const SUBSTITUTE_COUNT = 3
 const TOTAL_COUNT = STARTER_COUNT + SUBSTITUTE_COUNT
 const GROUPS = [
-  { key: 'starters', label: 'Titulares', singular: 'titular', count: STARTER_COUNT },
-  { key: 'substitutes', label: 'Suplentes', singular: 'suplente', count: SUBSTITUTE_COUNT },
+  { key: 'starters', label: 'Titulares', singular: 'Titular', count: STARTER_COUNT },
+  { key: 'substitutes', label: 'Suplentes', singular: 'Suplente', count: SUBSTITUTE_COUNT },
 ]
 const EMPTY_SELECTION = { starters: [], substitutes: [] }
 
