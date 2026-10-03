@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { get_current_user, logout as logout_session } from '../api/client'
 import { clear_session, read_session, save_session } from '../auth/session'
+import './Home.css'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -78,18 +79,47 @@ export default function Home() {
   }
 
   return (
-    <main className="card">
-      <p className="brand">FutBot</p>
-      {status === 'loading' && <p role="status">Verificando sesión…</p>}
-      {status === 'ready' && <>
-        <h1>Menú principal</h1>
-        <p className="intro">Bienvenido a tu club.</p>
-      </>}
-      {error && <p role="alert">{error}</p>}
-      {status === 'error' && <>
-        <button onClick={() => { set_error(''); set_status('loading'); set_attempt(attempt + 1) }}>Reintentar</button>
-      </>}
-      <button onClick={logout} disabled={closing}>{closing ? 'Cerrando sesión…' : 'Cerrar sesión'}</button>
-    </main>
+    <div className="home-page">
+      <header className="home-topbar">
+        <div className="home-identity">
+          <span className="home-mark"><HomeIcon /></span>
+          <div>
+            <p className="home-product">FutBot</p>
+            <p className="home-project">laboratorio / presión alta v4</p>
+          </div>
+        </div>
+        <div className="home-session">
+          {status === 'ready' && <span className="home-session-state"><span aria-hidden="true" /> Club en línea</span>}
+          <button className="home-action" onClick={logout} disabled={closing}>
+            {closing ? 'Cerrando sesión…' : 'Cerrar sesión'}
+          </button>
+        </div>
+      </header>
+
+      <main className="home-content" aria-busy={status === 'loading'}>
+        {status === 'loading' && <div className="home-notice" role="status">Verificando sesión…</div>}
+        {error && <p className="home-notice home-error" role="alert">{error}</p>}
+        {status === 'error' && (
+          <button className="home-action" onClick={() => { set_error(''); set_status('loading'); set_attempt(attempt + 1) }}>
+            Reintentar
+          </button>
+        )}
+        {status === 'ready' && (
+          <section className="home-welcome" aria-labelledby="home-title">
+            <h1 id="home-title">Menú principal</h1>
+            <p>Bienvenido a tu club. Prepará tu equipo, diseñá tu estrategia y elegí tu próximo desafío.</p>
+          </section>
+        )}
+      </main>
+    </div>
+  )
+}
+
+function HomeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M8 8l8 8M16 8l-8 8" />
+    </svg>
   )
 }

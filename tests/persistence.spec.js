@@ -32,7 +32,7 @@ test('conserva sesión vigente al cerrar el navegador y recuerda el logout', asy
     await with_browser(async page => {
       await page.goto(`${base_url}/login`)
       await page.getByLabel('Email').fill('user@example.com')
-      await page.getByLabel('Contraseña').fill('password')
+      await page.getByLabel('Contraseña', { exact: true }).fill('password')
       await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
       await expect(page.getByRole('heading', { name: 'Menú principal' })).toBeVisible()
     })
