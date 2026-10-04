@@ -10,15 +10,23 @@ export default function SquadSelector({ players, behaviors, squad, setSquad}) {
     };
 
     const handleSelectionChange = (type, index, field, value) => {
-        const updatedList = [...squad[type]];
-        updatedList[index] = { ...updatedList[index], [field]: value};
-        setSquad({ ...squad, [type]: updatedList});
+        const updatedList = squad[type].map((slot, i) => {
+          if(i === index) {
+            return { ...slot, [field]: value};
+          }
+          return slot;
+        });
+
+        setSquad({
+           ...squad, 
+           [type]: updatedList,
+          });
     };
 
     const selectedIds = getSelectedPlayersIds();
 
     const renderSlot = (type, index, label) => {
-        const currentSlot = squad[type][index];
+        const currentSlot = squad[type][index] || { playerId: '', behaviorId: '' };
 
         return (
       <div key={`${type}-${index}`} className="slot-card p-3 border rounded mb-3 bg-light">

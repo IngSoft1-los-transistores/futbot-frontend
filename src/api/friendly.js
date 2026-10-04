@@ -1,12 +1,9 @@
 // src/api/friendly.js
-import { API_URL, request } from './client';
+import { request } from './client';
 
-export async function createFriendlyRoom(squadData, token) {
+export async function createFriendlyRoom(squadData) {
   return request('/api/friendly/rooms', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
     body: JSON.stringify(squadData),
   });
 }
@@ -28,11 +25,9 @@ const MOCK_BEHAVIORS = [
   { id: '4', name: 'Posesión y Pase', is_preprogrammed: false },
 ];
 
-export async function getMyPlayers(token) {
+export async function getMyPlayers() {
   try {
-    return await request('/api/players/me', {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
+    return await request('/api/players/me');
   } catch (error) {
     if (error.status === 404) {
       console.warn('Endpoint /api/players/me dio 404. Usando datos mock de jugadores.');
@@ -42,11 +37,9 @@ export async function getMyPlayers(token) {
   }
 }
 
-export async function getMyBehaviors(token) {
+export async function getMyBehaviors() {
   try {
-    return await request('/api/behaviors/me', {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
+    return await request('/api/behaviors/me');
   } catch (error) {
     if (error.status === 404) {
       console.warn('Endpoint /api/behaviors/me dio 404. Usando datos mock de comportamientos.');
