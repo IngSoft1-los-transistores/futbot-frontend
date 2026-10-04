@@ -1,5 +1,5 @@
-import Chip from '../atoms/Chip'
-import Icon from '../atoms/Icon'
+import Chip from '../atoms/chip'
+import Icon from '../atoms/icon'
 import './molecules.css'
 
 const ROLE_LABELS = { starter: 'Titular', substitute: 'Suplente' }
@@ -18,7 +18,7 @@ function PlayerRow({ number, player, side }) {
       <span className="fb-player-row__behavior">
         <Chip>
           <Icon name="code" size={12} />
-          <span translate="no">{player.behavior_name}</span>
+          <span translate="no">{player.behaviorName}</span>
         </Chip>
       </span>
     </li>

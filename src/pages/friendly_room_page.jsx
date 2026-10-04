@@ -1,13 +1,13 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { ROOM_STATUS } from '../api/friendlyRooms'
-import Button from '../components/atoms/Button'
-import Icon from '../components/atoms/Icon'
-import Spinner from '../components/atoms/Spinner'
-import Alert from '../components/molecules/Alert'
-import RoomHeader from '../components/organisms/RoomHeader'
-import TeamPanel from '../components/organisms/TeamPanel'
-import { useFriendlyRoom } from '../hooks/useFriendlyRoom'
-import './FriendlyRoomPage.css'
+import { ROOM_STATUS } from '../api/friendly_rooms'
+import Button from '../components/atoms/button'
+import Icon from '../components/atoms/icon'
+import Spinner from '../components/atoms/spinner'
+import Alert from '../components/molecules/alert'
+import RoomHeader from '../components/organisms/room_header'
+import TeamPanel from '../components/organisms/team_panel'
+import { useFriendlyRoom } from '../hooks/use_friendly_room'
+import './friendly_room_page.css'
 
 const STATUS_CHIPS = {
   [ROOM_STATUS.WAITING_GUEST]: { label: 'Esperando rival', variant: 'warning' },
@@ -28,20 +28,20 @@ const ERROR_MESSAGES = {
     'Algún club no tiene sus 3 titulares y 3 suplentes con comportamientos válidos.',
 }
 
-function errorMessage(error, fallback) {
+function error_message(error, fallback) {
   if (!error?.status) return 'No se pudo contactar al servidor.'
   return ERROR_MESSAGES[error.error_code] ?? fallback
 }
 
-function FriendlyRoomPage() {
-  const { roomId } = useParams()
+export default function FriendlyRoomPage() {
+  const { room_id } = useParams()
   const navigate = useNavigate()
-  const { room, loadError, isStarting, startError, start } = useFriendlyRoom(roomId)
+  const { room, load_error, is_starting, start_error, start } = useFriendlyRoom(room_id)
 
-  if (loadError) {
+  if (load_error) {
     return (
       <main className="fb-room-page">
-        <Alert>{errorMessage(loadError, 'No se pudo cargar la sala.')}</Alert>
+        <Alert>{error_message(load_error, 'No se pudo cargar la sala.')}</Alert>
       </main>
     )
   }
@@ -55,35 +55,35 @@ function FriendlyRoomPage() {
     )
   }
 
-  const isFull = Boolean(room.home_club && room.away_club)
-  const isReady = room.status === ROOM_STATUS.READY_TO_START
+  const is_full = Boolean(room.homeClub && room.awayClub)
+  const is_ready = room.status === ROOM_STATUS.READY_TO_START
 
-  async function handleStart() {
+  async function handle_start() {
     const result = await start()
-    if (result) navigate(`/partidos/${result.match_id}`)
+    if (result) navigate(`/partidos/${result.matchId}`)
   }
 
   let action
-  if (room.match_id) {
+  if (room.matchId) {
     action = (
-      <Button onClick={() => navigate(`/partidos/${room.match_id}`)}>
+      <Button onClick={() => navigate(`/partidos/${room.matchId}`)}>
         <Icon name="play" />
         Ir al partido
       </Button>
     )
   } else {
     let label = 'Iniciar partido'
-    if (isStarting) label = 'Iniciando…'
-    else if (!isFull) label = 'Esperando rival'
-    else if (!isReady) label = 'Sala no disponible'
+    if (is_starting) label = 'Iniciando…'
+    else if (!is_full) label = 'Esperando rival'
+    else if (!is_ready) label = 'Sala no disponible'
 
     action = (
       <Button
-        onClick={handleStart}
-        disabled={!isFull || !isReady}
-        isLoading={isStarting}
+        onClick={handle_start}
+        disabled={!is_full || !is_ready}
+        isLoading={is_starting}
       >
-        {!isStarting && <Icon name="play" />}
+        {!is_starting && <Icon name="play" />}
         <span key={label}>{label}</span>
       </Button>
     )
@@ -95,20 +95,20 @@ function FriendlyRoomPage() {
         title="Amistoso"
         status={STATUS_CHIPS[room.status] ?? { label: room.status, variant: 'default' }}
         description="Cuando ambos clubes estén en la sala, cualquiera de los dos puede iniciar el partido."
-        roomCode={room.room_code}
+        roomCode={room.roomCode}
         actions={action}
       />
 
-      {startError && (
-        <Alert>{errorMessage(startError, 'No se pudo iniciar el partido.')}</Alert>
+      {start_error && (
+        <Alert>{error_message(start_error, 'No se pudo iniciar el partido.')}</Alert>
       )}
 
       <div className="fb-room-page__teams">
-        <TeamPanel club={room.home_club} side="home" />
+        <TeamPanel club={room.homeClub} side="home" />
         <span className="fb-room-page__versus" aria-hidden="true">
           VS
         </span>
-        <TeamPanel club={room.away_club} side="away" />
+        <TeamPanel club={room.awayClub} side="away" />
       </div>
 
       <Alert variant="info">
@@ -118,5 +118,3 @@ function FriendlyRoomPage() {
     </main>
   )
 }
-
-export default FriendlyRoomPage

@@ -1,7 +1,7 @@
-import Chip from '../atoms/Chip'
-import Icon from '../atoms/Icon'
-import Panel from '../atoms/Panel'
-import PlayerRow from '../molecules/PlayerRow'
+import Chip from '../atoms/chip'
+import Icon from '../atoms/icon'
+import Panel from '../atoms/panel'
+import PlayerRow from '../molecules/player_row'
 import './organisms.css'
 
 const SIDE_LABELS = { home: 'Local', away: 'Visitante' }
@@ -9,12 +9,12 @@ const SIDE_LABELS = { home: 'Local', away: 'Visitante' }
 // club is null while the away seat is still empty.
 function TeamPanel({ club, side }) {
   return (
-    <Panel className="fb-team-panel" aria-label={club ? club.club_name : SIDE_LABELS[side]}>
+    <Panel className="fb-team-panel" aria-label={club ? club.clubName : SIDE_LABELS[side]}>
       <header className="fb-team-panel__header">
         <span className={`fb-team-panel__color fb-team-panel__color--${side}`} />
         <div className="fb-team-panel__title">
           <h2 className="fb-heading fb-team-panel__name">
-            {club ? club.club_name : 'Esperando rival'}
+            {club ? club.clubName : 'Esperando rival'}
           </h2>
           <span className="fb-label">{SIDE_LABELS[side]}</span>
         </div>
@@ -32,7 +32,7 @@ function TeamPanel({ club, side }) {
         <ol className="fb-team-panel__players">
           {club.players.map((player, index) => (
             <PlayerRow
-              key={player.player_id}
+              key={player.playerId}
               number={index + 1}
               player={player}
               side={side}

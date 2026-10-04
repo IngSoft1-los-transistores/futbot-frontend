@@ -3,8 +3,9 @@ import Login from './pages/Login'
 import Home from './pages/Home'
 import RegisterPage from './pages/register_page'
 import LandingPage from './pages/landing_page'
-import FriendlyRoomPage from './pages/FriendlyRoomPage'
-import MatchPage from './pages/MatchPage'
+import BehaviorPage from './pages/behavior_page'
+import FriendlyRoomPage from './pages/friendly_room_page'
+import MatchPage from './pages/match_page'
 import './styles/tokens.css'
 import './App.css'
 
@@ -52,6 +53,17 @@ function Registration() {
     </div>
   )
 }
+// Layout para las páginas internas autenticadas (Home, Behaviors, sala amistosa, partido)
+function DashboardLayout({ children }) {
+  return (
+    <div className="bg-[url('/BackFutBot.png')] bg-cover bg-center bg-no-repeat min-h-dvh w-full flex flex-col text-white font-sans">
+      <Navbar />
+      <main className="container mx-auto p-4 flex-1 flex flex-col">
+        {children}
+      </main>
+    </div>
+  )
+}
 
 export default function App() {
   return (
@@ -61,10 +73,11 @@ export default function App() {
         <Route path="/register" element={<Registration />} />
         <Route path="/auth/register" element={<Navigate to="/register" replace />} />
         <Route path="/auth/login" element={<Navigate to="/login" replace />} />
+        <Route path="/behaviors" element={<DashboardLayout><BehaviorPage /></DashboardLayout>} />
         <Route path="/login" element={<Login />} />
         <Route path="/home" element={<Home />} />
-        <Route path="/amistosos/:roomId/sala" element={<FriendlyRoomPage />} />
-        <Route path="/partidos/:matchId" element={<MatchPage />} />
+        <Route path="/amistosos/:room_id/sala" element={<DashboardLayout><FriendlyRoomPage /></DashboardLayout>} />
+        <Route path="/partidos/:match_id" element={<DashboardLayout><MatchPage /></DashboardLayout>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

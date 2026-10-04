@@ -1,4 +1,4 @@
-import Spinner from './Spinner'
+import Spinner from './spinner'
 import './atoms.css'
 
 // variant: 'primary' | 'ghost'

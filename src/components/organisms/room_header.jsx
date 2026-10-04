@@ -1,5 +1,5 @@
-import Chip from '../atoms/Chip'
-import Panel from '../atoms/Panel'
+import Chip from '../atoms/chip'
+import Panel from '../atoms/panel'
 import './organisms.css'
 
 // status: { label, variant } already resolved by the page.
