@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { get_current_user, logout as logout_session } from '../api/client'
 import { clear_session, read_session, save_session } from '../auth/session'
 import './Home.css'
@@ -105,10 +105,49 @@ export default function Home() {
           </button>
         )}
         {status === 'ready' && (
+        <>
           <section className="home-welcome" aria-labelledby="home-title">
             <h1 id="home-title">Menú principal</h1>
             <p>Bienvenido a tu club. Prepará tu equipo, diseñá tu estrategia y elegí tu próximo desafío.</p>
           </section>
+
+          {/* Grilla para las tarjetas */}
+          <div className="home-grid">
+          
+            {/* Tarjeta de Comportamientos */}
+            <article className="home-card" aria-labelledby="home-card-behaviors" aria-describedby="home-card-behaviors-desc">
+              <div className="home-card-content">
+          
+                {/* Ícono de código */}
+                <div className="home-card-icon">
+                  <svg 
+                    viewBox="0 0 24 24"
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                </div>
+          
+                {/* Información de la tarjeta */}
+                <div>
+                  <h2>Comportamientos</h2>
+                  <p>
+                  Define reglas, bloques y comportamientos para cada jugador antes de enviarlos al campo.
+                  </p>
+                </div>
+              </div>
+
+              {/* Botón de acceso a la ruta */}
+              <Link 
+                to="/behaviors" 
+                className="home-action"
+              >
+              VER COMPORTAMIENTOS
+              </Link>
+            </article>
+          </div>
+        </>
         )}
       </main>
     </div>
