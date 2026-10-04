@@ -2,11 +2,11 @@ import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import Home from './Home'
-import { get_current_user } from '../api/client'
-import { save_session } from '../auth/session'
+import Home from '../src/pages/Home'
+import { get_current_user } from '../src/api/client'
+import { save_session } from '../src/auth/session'
 
-vi.mock('../api/client', () => ({ get_current_user: vi.fn(), logout: vi.fn() }))
+vi.mock('../src/api/client', () => ({ get_current_user: vi.fn(), logout: vi.fn() }))
 
 function Destination() {
   return <p>Destino: {useLocation().pathname}</p>

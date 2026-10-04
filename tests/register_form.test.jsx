@@ -1,12 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import RegisterForm from './register_form';
-import * as authApi from '../api/auth';
+import RegisterForm from '../src/components/register_form';
+import * as authApi from '../src/api/auth';
 import { BrowserRouter } from 'react-router-dom';
 
 // Simulamos la función de la API y el useNavigate de React Router
-vi.mock('../api/auth', () => ({
+vi.mock('../src/api/auth', () => ({
   registerUser: vi.fn(),
 }));
 

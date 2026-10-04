@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import BehaviorPage from './behavior_page.jsx'
-import * as sessionModule from '../auth/session'
-import * as apiModule from '../api/behaviors'
+import BehaviorPage from '../src/pages/behavior_page.jsx'
+import * as sessionModule from '../src/auth/session'
+import * as apiModule from '../src/api/behaviors'
 import userEvent from '@testing-library/user-event';
 
 const mockNavigate = vi.fn();
@@ -15,11 +15,11 @@ vi.mock('react-router-dom', async () => {
     };
 });
 
-vi.mock('../api/behaviors', () => ({
+vi.mock('../src/api/behaviors', () => ({
     get_behaviors: vi.fn(),
 }));
 
-vi.mock('../auth/session', () => ({
+vi.mock('../src/auth/session', () => ({
     read_session: vi.fn(),
 }));
 

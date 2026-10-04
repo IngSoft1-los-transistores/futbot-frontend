@@ -1,11 +1,11 @@
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import Match from './Match'
-import { get_match_state } from '../api/matches'
-import { save_session } from '../auth/session'
+import Match from '../src/pages/Match'
+import { get_match_state } from '../src/api/matches'
+import { save_session } from '../src/auth/session'
 
-vi.mock('../api/matches', () => ({ get_match_state: vi.fn() }))
+vi.mock('../src/api/matches', () => ({ get_match_state: vi.fn() }))
 const snapshot = (changes = {}) => ({
   match_id: 'match-1', revision: 1, status: 'in_progress',
   home_club: { club_id: 'home', name: 'Local FC' }, away_club: { club_id: 'away', name: 'Visitante FC' },
