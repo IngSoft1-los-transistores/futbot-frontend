@@ -3,8 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import Match from '../src/pages/Match'
 import { connect_match_state } from '../src/api/matches'
+import { get_behaviors } from '../src/api/behaviors'
 import { save_session } from '../src/auth/session'
 
+vi.mock('../src/api/behaviors', () => ({ get_behaviors: vi.fn() }))
 vi.mock('../src/api/matches', () => ({ connect_match_state: vi.fn() }))
 const snapshot = (changes = {}) => ({
   match_id: 'match-1', revision: 1, status: 'in_progress',
@@ -33,6 +35,7 @@ const tick = async (ms = 1000) => act(async () => { await vi.advanceTimersByTime
 beforeEach(() => {
   vi.useFakeTimers()
   vi.resetAllMocks()
+  get_behaviors.mockResolvedValue([{ id: 'b1', name: 'Defensa' }, { id: 'b2', name: 'Ataque' }])
   sockets = []
   connect_match_state.mockImplementation(() => {
     const socket = new Socket()
@@ -59,7 +62,7 @@ describe('Estado del partido por WebSocket', () => {
     expect(screen.getByLabelText('Marcador: 1 a 0')).toBeInTheDocument()
     expect(screen.getByText('00:42')).toBeInTheDocument()
     expect(screen.getByText('Gol')).toBeInTheDocument()
-    expect(screen.getByText('Comportamiento: b2')).toBeInTheDocument()
+    expect(screen.getByText('Comportamiento: Ataque')).toBeInTheDocument()
     expect(marker.getAttribute('transform')).not.toBe(initial_position)
     expect(marker.querySelector('.match-possession-ring')).not.toBeNull()
     await tick(3000)
@@ -143,6 +146,25 @@ describe('Estado del partido por WebSocket', () => {
     await tick(2000)
     expect(screen.getByText('Inicio de sesión')).toBeInTheDocument()
     expect(sockets[0].close).toHaveBeenCalled()
+  })
+
+  it('consulta el catálogo una vez y muestra nombres en las actualizaciones', async () => {
+    mount()
+    await emit(() => sockets[0].state())
+    expect(screen.getByText('Comportamiento: Defensa')).toBeInTheDocument()
+    await emit(() => sockets[0].state({ revision: 2 }))
+    expect(get_behaviors).toHaveBeenCalledTimes(1)
+  })
+
+  it('conserva el partido si falla el catálogo y no muestra UUID como nombre', async () => {
+    get_behaviors.mockRejectedValue(new Error('Catálogo no disponible'))
+    mount()
+    await emit(() => sockets[0].state())
+    expect(screen.getByText('Comportamiento: Nombre no disponible')).toBeInTheDocument()
+    expect(screen.queryByText('Comportamiento: b1')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Marcador: 0 a 0')).toBeInTheDocument()
+    await emit(() => sockets[0].state({ revision: 2, players: [{ ...snapshot().players[0], behavior_name: 'Pase corto' }] }))
+    expect(screen.getByText('Comportamiento: Pase corto')).toBeInTheDocument()
   })
 
   it('limpia conexiones y reintentos al desmontar', async () => {

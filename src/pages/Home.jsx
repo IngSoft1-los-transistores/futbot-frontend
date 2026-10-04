@@ -122,7 +122,7 @@ export default function Home() {
               <form className="match-entry" onSubmit={(event) => {
                 event.preventDefault()
                 const id = new FormData(event.currentTarget).get('match_id').trim()
-                if (id) navigate(`/matches/${encodeURIComponent(id)}`)
+                if (id) navigate(`/partidos/${encodeURIComponent(id)}`)
               }}>
                 <label htmlFor="match_id">ID del partido</label>
                 <input id="match_id" name="match_id" required placeholder="Ingresá el ID del partido" />

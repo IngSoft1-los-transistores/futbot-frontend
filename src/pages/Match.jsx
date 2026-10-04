@@ -1,4 +1,6 @@
-import { Link, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { get_behaviors } from '../api/behaviors'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import useMatchState from '../hooks/use_match_state'
 import MatchPitch from '../components/match_pitch'
 import './Match.css'
@@ -12,14 +14,33 @@ const actions = {
 const time = (seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${Math.floor(seconds % 60).toString().padStart(2, '0')}`
 const position = (point) => point ? `(${point.x}, ${point.y})` : 'Sin posición'
 
-function MatchView({ match_id }) {
+function MatchView({ match_id, room_behavior_names }) {
   const { state, error, loading } = useMatchState(match_id)
+  const [behavior_names, set_behavior_names] = useState({})
+  const has_state = Boolean(state)
+
+  useEffect(() => {
+    if (!has_state) return
+    const controller = new AbortController()
+    get_behaviors({ signal: controller.signal }).then((behaviors) => {
+      if (controller.signal.aborted) return
+      set_behavior_names(Object.fromEntries(behaviors.map(({ id, name }) => [id, name])))
+    }).catch(() => {
+      // El catálogo puede no incluir comportamientos privados del rival.
+      // Su ausencia no debe interrumpir la transmisión del partido.
+      if (!controller.signal.aborted) set_behavior_names({})
+    })
+    return () => controller.abort()
+  }, [has_state])
+
+  const behavior_name = (player) => player.behavior_name?.trim() || behavior_names[player.behavior_id] || room_behavior_names?.[player.behavior_id] || 'Nombre no disponible'
+  const encounter = state ? `${state.home_club.name} vs. ${state.away_club.name}` : 'Estado del partido'
   return (
     <div className="match-page">
       <header className="match-header">
         <Link to="/home" className="match-brand" aria-label="FutBot · Volver al menú">
           <span className="match-brand-mark" aria-hidden="true">⚽</span>
-          <span><span className="match-brand-name">FutBot</span><span className="match-brand-project">laboratorio / presión alta v4</span></span>
+          <span><span className="match-brand-name">FutBot</span><span className="match-brand-project" title={encounter}>{encounter}</span></span>
         </Link>
         <span className="match-connection"><i aria-hidden="true" />{error ? 'Sin sincronizar' : loading ? 'Conectando…' : 'Estado recibido'}</span>
       </header>
@@ -35,7 +56,6 @@ function MatchView({ match_id }) {
             <h2><i className="match-team-color match-team-color--away" aria-hidden="true" />{state.away_club.name}</h2>
           </div>
           <div className="match-clock"><span className={`match-status match-status--${state.status}`}>{statuses[state.status]}</span><time aria-label="Tiempo transcurrido">{time(state.current_time)}</time></div>
-          <span className="match-format">Partido amistoso</span>
         </section>
         <MatchPitch state={state} />
         <div className="match-pitch-footer"><Link to="/home">← Volver al menú</Link><span>Restante: <time>{time(state.remaining_time)}</time></span></div>
@@ -47,7 +67,7 @@ function MatchView({ match_id }) {
             <ul className="match-players">{state.players.filter((player) => player.club_id === club.club_id).map((player) => <li key={player.player_id}>
               <strong>{player.name}</strong><span>{player.on_field ? 'En cancha' : 'Fuera de cancha'}{player.has_ball ? ' · Con pelota' : ''}</span>
               <span>Posición: {position(player.position)}</span>
-              <small>Comportamiento: {player.behavior_id}</small>
+              <small>Comportamiento: {behavior_name(player)}</small>
             </li>)}</ul>
           </section>)}
         </div>
@@ -71,5 +91,6 @@ function MatchView({ match_id }) {
 
 export default function Match() {
   const { match_id } = useParams()
-  return <MatchView key={match_id} match_id={match_id.toLowerCase()} />
+  const { state } = useLocation()
+  return <MatchView key={match_id} match_id={match_id.toLowerCase()} room_behavior_names={state?.behavior_names} />
 }

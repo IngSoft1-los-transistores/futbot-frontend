@@ -3,7 +3,7 @@
 .match-brand { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
 .match-brand-mark { width: 36px; height: 36px; border-radius: 8px; background: #d49a53; display: grid; place-items: center; font-size: 22px; }
 .match-brand-name { display: block; font-size: 18px; }
-.match-brand-project { display: block; font: 10px 'IBM Plex Mono', monospace; color: #f3f3f3; }
+.match-brand-project { display: block; max-width: min(55vw, 480px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 10px 'IBM Plex Mono', monospace; color: #f3f3f3; }
 .match-connection { display: flex; align-items: center; gap: 8px; font: 10px 'IBM Plex Mono', monospace; }
 .match-connection i { width: 7px; height: 7px; border-radius: 50%; background: #82a66f; }
 .match-arena { width: 100%; max-width: 1440px; margin: auto; padding: 20px 5% 32px; display: flex; flex-direction: column; gap: 14px; }
@@ -20,7 +20,6 @@
 .match-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #82a66f; }
 .match-status--paused::before { background: #d49a53; }
 .match-status--finished::before { background: #b5c2b3; }
-.match-format { border: 1px solid #fff3; border-radius: 5px; background: #ffffff0a; padding: 6px 10px; white-space: nowrap; font: 10px 'IBM Plex Mono', monospace; color: #fffc; }
 .match-pitch { display: block; width: 100%; height: auto; aspect-ratio: 1296 / 622; background: #245a3a; border: 2px solid #f3ecdd66; box-shadow: 0 16px 32px #06160d70; border-radius: 18px; overflow: hidden; }
 .match-pitch-stripes { fill: #2b6542; opacity: .7; }
 .match-pitch-lines { fill: none; stroke: #f3ecdd; stroke-width: 3; }

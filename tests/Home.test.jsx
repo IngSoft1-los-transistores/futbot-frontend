@@ -27,7 +27,7 @@ afterEach(() => {
 async function mount() {
   render(<MemoryRouter initialEntries={['/home']}><Routes>
     <Route path="/home" element={<Home />} />
-    <Route path="/matches/:match_id" element={<Destination />} />
+    <Route path="/partidos/:match_id" element={<Destination />} />
     <Route path="/behaviors" element={<Destination />} />
   </Routes></MemoryRouter>)
   await screen.findByRole('heading', { name: 'Menú principal' })
@@ -48,7 +48,7 @@ it('abre el partido con el ID recortado y codificado', async () => {
   const user = await mount()
   await user.type(screen.getByLabelText('ID del partido'), ' partido/1 ')
   await user.click(screen.getByRole('button', { name: 'Ver partido' }))
-  expect(screen.getByText('Destino: /matches/partido%2F1')).toBeInTheDocument()
+  expect(screen.getByText('Destino: /partidos/partido%2F1')).toBeInTheDocument()
 })
 
 it('no navega cuando el ID contiene solo espacios', async () => {

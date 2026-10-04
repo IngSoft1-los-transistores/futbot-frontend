@@ -148,24 +148,25 @@ npm run test:e2e
 
 ## Estado actual del partido
 
-Desde el menú principal se puede ingresar el ID de un partido, o abrir directamente
-`/matches/:match_id`. Requiere una sesión vigente y pertenecer a uno de sus clubes;
-el backend valida el acceso. Actualmente no existe un endpoint para descubrir el
-partido activo del usuario.
+La sala amistosa abre `/partidos/:match_id` al iniciar o elegir “Ir al partido”.
+Esta ruta muestra la cancha completa, el marcador y las actualizaciones por
+WebSocket. `/matches/:match_id` sigue disponible para enlaces anteriores y la
+demo. Desde Home también se puede ingresar el ID manualmente.
 
-La vista consulta `GET /api/matches/{match_id}/state` al entrar y un segundo después
-de terminar cada consulta. Usa el token de sesión, evita caché y consultas
-superpuestas, y cancela la petición al salir. El reloj, marcador, jugadores,
-posiciones, posesión, comportamientos y acciones provienen del snapshot del servidor;
-no se simula el avance del partido en el navegador. Las revisiones anteriores se
-ignoran y las consultas se detienen al finalizar.
+La conexión usa `/api/matches/{match_id}/ws`, con el token de sesión en el primer
+mensaje. `VITE_WS_URL` configura la dirección; si no existe, se deriva de
+`VITE_API_URL`. No se consulta periódicamente el estado por HTTP. Ante una
+interrupción, conserva el último estado, avisa y reconecta; ignora revisiones
+anteriores y cierra la conexión al finalizar el partido.
 
-Ante errores temporales se conserva el último snapshot con una advertencia y se
-reintenta automáticamente. Un 409 espera la publicación inicial; 403, 404 y 422
-muestran un error y detienen las consultas; 401 redirige al login.
+La cabecera muestra los clubes participantes. No se presupone el formato del
+partido, ya que el snapshot actual no incluye ese dato. La cancha usa dimensiones
+provisionales de 100 × 60 con origen en el centro.
 
-El endpoint entrega únicamente las acciones del último tick, no un historial:
-el polling puede omitir acciones intermedias. Para garantizar la reproducción de
-todas las acciones se necesita soporte del backend para eventos con cursor o streaming.
-Las posiciones se muestran como coordenadas porque el contrato no define dimensiones
-de cancha. Los comportamientos se identifican por su ID, el dato disponible en el estado.
+Los nombres de los comportamientos se obtienen del catálogo (`/api/behaviors`)
+y de los datos de la sala al navegar. Si el snapshot incluye `behavior_name`,
+se prioriza ese valor. Un comportamiento privado del rival puede no estar en el
+catálogo: si no hay nombre disponible se muestra “Nombre no disponible”, sin
+exponer el UUID como etiqueta. Un fallo del catálogo no interrumpe el partido.
+
+Las acciones corresponden al último snapshot recibido, no a un historial completo.

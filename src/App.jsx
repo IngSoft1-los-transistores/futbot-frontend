@@ -5,6 +5,8 @@ import Match from './pages/Match'
 import RegisterPage from './pages/register_page'
 import LandingPage from './pages/landing_page'
 import BehaviorPage from './pages/behavior_page'
+import FriendlyRoomPage from './pages/friendly_room_page'
+import './styles/tokens.css'
 import './App.css'
 
 const Navbar = () => (
@@ -51,7 +53,7 @@ function Registration() {
     </div>
   )
 }
-// Layout para las páginas internas autenticadas (Home, Behaviors)
+// Layout para las páginas internas autenticadas (Home, Behaviors, sala amistosa)
 function DashboardLayout({ children }) {
   return (
     <div className="bg-[url('/BackFutBot.png')] bg-cover bg-center bg-no-repeat min-h-dvh w-full flex flex-col text-white font-sans">
@@ -75,6 +77,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/matches/:match_id" element={<Match />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/amistosos/:room_id/sala" element={<DashboardLayout><FriendlyRoomPage /></DashboardLayout>} />
+        <Route path="/partidos/:match_id" element={<Match />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
