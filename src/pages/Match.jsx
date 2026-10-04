@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import useMatchState from '../hooks/use_match_state'
+import MatchPitch from '../components/match_pitch'
 import './Match.css'
 
 const statuses = { in_progress: 'En juego', paused: 'En pausa', finished: 'Finalizado' }
@@ -14,17 +15,32 @@ const position = (point) => point ? `(${point.x}, ${point.y})` : 'Sin posición'
 function MatchView({ match_id }) {
   const { state, error, loading } = useMatchState(match_id)
   return (
-    <main className="match-page">
-      <header className="match-header"><Link to="/home">← Volver al menú</Link><span>FutBot / Partido</span></header>
-      <h1>Estado del partido</h1>
+    <div className="match-page">
+      <header className="match-header">
+        <Link to="/home" className="match-brand" aria-label="FutBot · Volver al menú">
+          <span className="match-brand-mark" aria-hidden="true">⚽</span>
+          <span><span className="match-brand-name">FutBot</span><span className="match-brand-project">laboratorio / presión alta v4</span></span>
+        </Link>
+        <span className="match-connection"><i aria-hidden="true" />{error ? 'Sin sincronizar' : loading ? 'Conectando…' : 'Estado recibido'}</span>
+      </header>
+      <main className="match-arena">
+      <h1 className="match-sr-only">Estado del partido</h1>
       {loading && <p role="status">Cargando partido…</p>}
       {error && <div className="match-warning" role="alert">{error}{state && <p>Se muestra el último estado recibido; puede estar desactualizado.</p>}</div>}
       {state && <>
         <section className="match-scoreboard" aria-label="Marcador" aria-live="polite">
-          <p className="match-status">{statuses[state.status]}</p>
-          <div className="match-score"><h2>{state.home_club.name}<small>Local</small></h2><strong aria-label={`Marcador: ${state.score.home} a ${state.score.away}`}>{state.score.home} – {state.score.away}</strong><h2>{state.away_club.name}<small>Visitante</small></h2></div>
-          <p>Transcurrido: <time>{time(state.current_time)}</time> · Restante: <time>{time(state.remaining_time)}</time></p>
+          <div className="match-score">
+            <h2><i className="match-team-color match-team-color--home" aria-hidden="true" />{state.home_club.name}</h2>
+            <strong aria-label={`Marcador: ${state.score.home} a ${state.score.away}`}>{state.score.home}<span>–</span>{state.score.away}</strong>
+            <h2><i className="match-team-color match-team-color--away" aria-hidden="true" />{state.away_club.name}</h2>
+          </div>
+          <div className="match-clock"><span className={`match-status match-status--${state.status}`}>{statuses[state.status]}</span><time aria-label="Tiempo transcurrido">{time(state.current_time)}</time></div>
+          <span className="match-format">Partido amistoso</span>
         </section>
+        <MatchPitch state={state} />
+        <div className="match-pitch-footer"><Link to="/home">← Volver al menú</Link><span>Restante: <time>{time(state.remaining_time)}</time></span></div>
+        <details className="match-details">
+          <summary>Jugadores y acciones del partido</summary>
         <div className="match-teams">
           {[state.home_club, state.away_club].map((club) => <section className="match-panel" key={club.club_id}>
             <h2>{club.name}</h2>
@@ -46,8 +62,10 @@ function MatchView({ match_id }) {
             return <li key={`${state.revision}-${index}`}><strong>{actions[action.type] ?? action.type}</strong>{player && ` · ${player.name}`}{club && ` · ${club.name}`}{action.destination && ` → ${position(action.destination)}`}</li>
           })}</ul>}
         </section>
+        </details>
       </>}
-    </main>
+      </main>
+    </div>
   )
 }
 
