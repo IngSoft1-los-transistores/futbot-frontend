@@ -73,6 +73,41 @@ Para detenerla: `Ctrl+C`.
 | `npm run preview` | Sirve lo compilado, para verificar el build |
 | `npm run lint` | Revisa el código con ESLint |
 
+## Comandos rápidos con make
+
+El `Makefile` de la raíz agrupa los comandos de uso diario. El backend tiene el suyo, con los mismos nombres.
+
+**Instalar make**
+
+| Sistema | Cómo |
+|---|---|
+| Linux / WSL | `sudo apt install make` (en Ubuntu suele venir instalado) |
+| macOS | `xcode-select --install` |
+| Windows | `winget install ezwinports.make` y reiniciar la terminal |
+
+Funciona igual desde PowerShell, Git Bash, WSL, Linux y macOS.
+
+**Comandos**
+
+| Comando | Qué hace |
+|---|---|
+| `make help` | Lista los comandos disponibles |
+| `make install` | Instala las dependencias y el Chromium que usa Playwright |
+| `make reinstall` | Borra `node_modules` e instala todo de cero |
+| `make dev` | Levanta la app en http://localhost:5173 |
+| `make test` | Corre los tests unitarios y, si pasan, los e2e |
+| `make test-unit` | Corre sólo los tests unitarios (Vitest), una vez |
+| `make test-e2e` | Corre sólo los tests e2e (Playwright) |
+| `make coverage` | Corre los tests unitarios y genera la cobertura en `coverage/index.html` |
+| `make lint` | Revisa el código con ESLint |
+| `make clean` | Borra `dist/`, `coverage/` y los reportes de Playwright. No toca `.env` ni `node_modules` |
+
+`make test` devuelve código de salida distinto de 0 si algún test falla, así que sirve para CI.
+
+Los tests e2e **no necesitan el backend**: simulan la API, y Playwright levanta su propio servidor de Vite en el puerto 5173. Por eso fallan si `make dev` ya está corriendo: hay que cortarlo antes. En Linux o WSL, si Chromium no arranca por librerías faltantes, correr una vez `sudo npx playwright install-deps`.
+
+**Windows y WSL:** `node_modules` trae binarios propios de cada sistema, así que uno instalado desde Windows no funciona en WSL ni al revés. Si se usa WSL, clonar el repo dentro de WSL (por ejemplo en `~/`), no trabajar sobre `/mnt/c/...`: además de evitar el problema, es mucho más rápido. `make reinstall` queda para cuando el entorno se rompe o se cambia de sistema sobre la misma carpeta.
+
 ## Variables de entorno
 
 | Variable | Para qué | Valor en desarrollo |
