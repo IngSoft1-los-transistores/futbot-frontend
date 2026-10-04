@@ -1,6 +1,6 @@
 // src/pages/Home.jsx
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { get_current_user, logout as logout_session } from '../api/client'
 import { clear_session, read_session, save_session } from '../auth/session'
 import CreateFriendlyModal from '../components/CreateFriendlyModal'
@@ -112,64 +112,49 @@ export default function Home() {
         )}
 
         {status === 'ready' && (
-          <>
-            <section className="home-welcome" aria-labelledby="home-title">
-              <h1 id="home-title">Laboratorio táctico</h1>
-              <p>Configura tu equipo, programa el comportamiento de cada jugador y prepara la estrategia antes de entrar al partido.</p>
-            </section>
+        <>
+          <section className="home-welcome" aria-labelledby="home-title">
+            <h1 id="home-title">Menú principal</h1>
+            <p>Bienvenido a tu club. Prepará tu equipo, diseñá tu estrategia y elegí tu próximo desafío.</p>
+          </section>
 
-            <div className="home-grid">
-              <div className="home-card">
-                <div className="card-icon"><CodeIcon/></div>
-                <h3>Comportamientos</h3>
-                <p>Define reglas, bloques y comportamientos para cada jugador antes de enviarlos al campo.</p>
-                <button className="home-action">EDITAR LÓGICA</button>
-              </div>
-
-              <div className="home-card">
-                <div className="card-icon"><GearIcon/></div>
-                <h3>Jugadores</h3>
-                <p>Ajusta formación, roles, intensidad y estrategia global para adaptar el juego a tu estilo.</p>
-                <button className="home-action">AJUSTES</button>
-              </div>
-
-              <div className="home-card">
-                <div className="card-icon"><BookIcon/></div>
-                <h3>Club</h3>
-                <p>Perfil personal con informacion de usuario</p>
-                <button className="home-action">VER CLUB</button>
-              </div>
-
-              <div className="home-card">
-                <div className="card-icon"><HelpIcon/></div>
-                <h3>Ayuda</h3>
-                <p>Consulta guías, ejemplos y documentación para entender mejor el lenguaje de programación.</p>
-                <button className="home-action">VER AYUDA</button>
-              </div>
-
-              <div className="home-card">
-                <div className="card-icon"><UsersIcon/></div>
-                <h3>Ligas públicas</h3>
-                <p>Explora torneos abiertos, clasificaciones y competencias disponibles para unirte.</p>
-                <div className="card-buttons">
-                  <button className="home-action">VER LIGAS</button>
-                  <button className="home-action">CREAR</button>
+          {/* Grilla para las tarjetas */}
+          <div className="home-grid">
+          
+            {/* Tarjeta de Comportamientos */}
+            <article className="home-card" aria-labelledby="home-card-behaviors" aria-describedby="home-card-behaviors-desc">
+              <div className="home-card-content">
+          
+                {/* Ícono de código */}
+                <div className="home-card-icon">
+                  <svg 
+                    viewBox="0 0 24 24"
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                </div>
+          
+                {/* Información de la tarjeta */}
+                <div>
+                  <h2>Comportamientos</h2>
+                  <p>
+                  Define reglas, bloques y comportamientos para cada jugador antes de enviarlos al campo.
+                  </p>
                 </div>
               </div>
 
-              <div className="home-card">
-                <div className="card-icon"><LockIcon/></div>
-                <h3>Unirse a liga privada / Amistoso</h3>
-                <p>Únete a una liga privada o crea un partido amistoso con invitaciones personalizadas.</p>
-                <div className="card-buttons">
-                  <button className="home-action">UNIRSE</button>
-                  <button className="home-action" onClick={() => setIsFriendlyModalOpen(true)}>
-                    CREAR
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>
+              {/* Botón de acceso a la ruta */}
+              <Link 
+                to="/behaviors" 
+                className="home-action"
+              >
+              VER COMPORTAMIENTOS
+              </Link>
+            </article>
+          </div>
+        </>
         )}
       </main>
 
