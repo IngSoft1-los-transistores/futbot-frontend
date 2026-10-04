@@ -19,7 +19,10 @@ function BehaviorRow({ name, code, isDefault }) {
                     <span className="truncate">{isDefault ? 'Preprogramado' : 'Propio'}</span>
                 </div>
                 {/* Botón  */}
-                <button className="border border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b] px-3 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0">
+                <button 
+                    className="border border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b] px-3 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
+                    onClick={() => alert(`Funcionalidad en desarrollo. Estará disponible próximamente.`)}
+                >
                     Ver detalles
                 </button>
               
