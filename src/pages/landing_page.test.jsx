@@ -23,7 +23,7 @@ const renderLanding = () => {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<p>Pantalla de login</p>} />
-        <Route path="/auth/register" element={<p>Pantalla de registro</p>} />
+        <Route path="/register" element={<p>Pantalla de registro</p>} />
         <Route path="/home" element={<p>Pantalla de home</p>} />
       </Routes>
     </MemoryRouter>
@@ -73,7 +73,7 @@ describe('LandingPage', () => {
     expect(screen.getByText('Pantalla de login')).toBeInTheDocument();
   });
 
-  it('Debe navegar a /auth/register al presionar "Crear cuenta"', async () => {
+  it('Debe navegar a /register al presionar "Crear cuenta"', async () => {
     const user = userEvent.setup();
     renderLanding();
 

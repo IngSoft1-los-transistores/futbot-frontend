@@ -1,6 +1,6 @@
 const SESSION_KEY = 'futbot.session'
 
-export function save_session(session) {
+export function save_session(session, remember = localStorage.getItem(SESSION_KEY) !== null || sessionStorage.getItem(SESSION_KEY) === null) {
   const { access_token, refresh_token, club_id, expires_at } = session ?? {}
   if (!Number.isFinite(expires_at) || expires_at * 1000 <= Date.now() ||
       typeof access_token !== 'string' || !access_token.trim() ||
@@ -8,9 +8,12 @@ export function save_session(session) {
       typeof club_id !== 'string' || !club_id.trim()) {
     throw new Error('La respuesta de inicio de sesión está incompleta.')
   }
-  // Nunca almacenar la contraseña. La sesión persiste al cerrar el navegador.
+  // Nunca almacenar la contraseña. Recordarme decide si persiste al cerrar el navegador.
   try {
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ access_token, refresh_token, club_id, expires_at }))
+    const storage = remember ? localStorage : sessionStorage
+    const otherStorage = remember ? sessionStorage : localStorage
+    storage.setItem(SESSION_KEY, JSON.stringify({ access_token, refresh_token, club_id, expires_at }))
+    otherStorage.removeItem(SESSION_KEY)
   } catch {
     throw new Error('No se pudo guardar la sesión. Habilitá el almacenamiento del navegador e intentá nuevamente.')
   }
@@ -18,7 +21,7 @@ export function save_session(session) {
 
 export function read_session() {
   try {
-    const session = JSON.parse(localStorage.getItem(SESSION_KEY))
+    const session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY))
     if (!Number.isFinite(session?.expires_at) || session.expires_at * 1000 <= Date.now()) {
       clear_session()
       return null
@@ -33,4 +36,5 @@ export function read_session() {
 
 export function clear_session() {
   localStorage.removeItem(SESSION_KEY)
+  sessionStorage.removeItem(SESSION_KEY)
 }
