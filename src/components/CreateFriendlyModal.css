@@ -25,8 +25,7 @@
 
 .modal-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: center;
   border-bottom: 1px solid #2a5235;
   padding-bottom: 12px;
   margin-bottom: 20px;
@@ -42,6 +41,8 @@
 
 .modal-actions {
   display: flex;
+  align-items: flex-end;
+  justify-content: end;
   gap: 12px;
   margin-top: 24px;
 }

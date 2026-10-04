@@ -74,8 +74,7 @@ export default function CreateFriendlyModal({ isOpen, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Crear Partido Amistoso</h2>
-          <button className="modal-close" onClick={onClose}>&times;</button>
+          <h1 className="text">Crear Partido Amistoso</h1>
         </div>
 
         {error && <div className="modal-alert modal-alert-danger">{error}</div>}

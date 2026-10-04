@@ -1,4 +1,5 @@
 import React from 'react';
+import './SquadSelector.css'
 
 export default function SquadSelector({ players, behaviors, squad, setSquad}) {
 
@@ -29,12 +30,11 @@ export default function SquadSelector({ players, behaviors, squad, setSquad}) {
         const currentSlot = squad[type][index] || { playerId: '', behaviorId: '' };
 
         return (
-      <div key={`${type}-${index}`} className="slot-card p-3 border rounded mb-3 bg-light">
+      <div key={`${type}-${index}`} className="slot-card">
         <h6 className="fw-bold">{label} {index + 1}</h6>
-        <div className="row g-2">
+        <div className="row">
           {/* Selección de Jugador */}
-          <div className="col-md-6">
-            <label className="form-label text-muted small">Jugador</label>
+          <div className="col">
             <select
               className="form-select"
               value={currentSlot.playerId}
@@ -56,8 +56,7 @@ export default function SquadSelector({ players, behaviors, squad, setSquad}) {
           </div>
 
           {/* Selección de Comportamiento */}
-          <div className="col-md-6">
-            <label className="form-label text-muted small">Comportamiento</label>
+          <div className="col">
             <select
               className="form-select"
               value={currentSlot.behaviorId}
@@ -78,10 +77,10 @@ export default function SquadSelector({ players, behaviors, squad, setSquad}) {
 
   return (
     <div className="squad-selector">
-      <h5 className="text-primary mb-3">Titulares (3 requeridos)</h5>
+      <h5 className="text">Titulares (3 requeridos)</h5>
       {[0, 1, 2].map((i) => renderSlot('starters', i, 'Titular'))}
 
-      <h5 className="text-primary mb-3 mt-4">Suplentes (3 requeridos)</h5>
+      <h5 className="text">Suplentes (3 requeridos)</h5>
       {[0, 1, 2].map((i) => renderSlot('substitutes', i, 'Suplente'))}
     </div>
   );
