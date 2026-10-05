@@ -9,6 +9,7 @@ import FriendlyRoomPage from './pages/friendly_room_page'
 import './styles/tokens.css'
 import './App.css'
 
+
 const Navbar = () => (
   <nav id="top-bar">
     <div className="flex items-center gap-3">
