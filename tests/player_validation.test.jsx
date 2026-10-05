@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validate_player } from './player_validation';
+import { validate_player } from '../src/components/player_validation.jsx';
 
 // Jugador valido de base
 const base = {

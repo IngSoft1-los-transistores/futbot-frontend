@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createPlayer } from './players';
-import { save_session, clear_session } from '../auth/session.js';
+import { createPlayer } from '../src/api/players.js';
+import { save_session, clear_session } from '../src/auth/session.js';
 
 // Mock de fetch para simular las respuestas de la API
 describe('createPlayer', () => {

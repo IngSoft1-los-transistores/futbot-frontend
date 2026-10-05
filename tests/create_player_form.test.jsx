@@ -1,11 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import CreatePlayerForm from './create_player_form';
-import * as playersApi from '../api/players';
+import CreatePlayerForm from '../src/components/create_player_form.jsx';
+import * as playersApi from '../src/api/players.js';
 
 // Mock de createPlayer para evitar llamadas reales a la API
-vi.mock('../api/players', () => ({ createPlayer: vi.fn() }));
+vi.mock('../src/api/players.js', () => ({ createPlayer: vi.fn() }));
 
 beforeEach(() => {
   vi.clearAllMocks();
