@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { connect_match_state } from '../api/matches'
 import { clear_session, read_session } from '../auth/session'
@@ -20,9 +20,14 @@ function valid_state(state, match_id) {
     Array.isArray(state.actions) && state.actions.every((action) => action && typeof action.type === 'string')
 }
 
-export default function useMatchState(match_id) {
+export default function useMatchState(match_id, on_protocol_message) {
   const navigate = useNavigate()
   const [view, set_view] = useState({ state: null, error: '', loading: true })
+  const protocol_message_ref = useRef(on_protocol_message)
+
+  useEffect(() => {
+    protocol_message_ref.current = on_protocol_message
+  }, [on_protocol_message])
 
   useEffect(() => {
     let disposed = false
@@ -73,6 +78,7 @@ export default function useMatchState(match_id) {
     }
     const retry = () => {
       if (disposed || stopped) return
+      protocol_message_ref.current?.({ type: 'connection', value: 'reconnecting' })
       disconnect()
       clearTimeout(reconnect_timer)
       set_view({ state: latest, loading: false, error: 'No se pudo actualizar el partido. Reintentando automáticamente…' })
@@ -92,6 +98,7 @@ export default function useMatchState(match_id) {
         arm_watchdog(10000)
         current.onopen = () => {
           if (socket !== current || disposed) return
+          protocol_message_ref.current?.({ type: 'connection', value: 'open' })
           current.send(JSON.stringify({ type: 'auth', token: connected_session.access_token }))
         }
         current.onmessage = (event) => {
@@ -119,7 +126,13 @@ export default function useMatchState(match_id) {
               retry()
               return
             }
-            if (message.type !== 'state' || !valid_state(message.state, match_id)) throw new Error('Estado inválido')
+            // Los snapshots siguen siendo el formato principal. Los mensajes
+            // event/payload se reenvían a la página para procesarlos allí.
+            if (message.type !== 'state') {
+              protocol_message_ref.current?.(event.data)
+              return
+            }
+            if (!valid_state(message.state, match_id)) throw new Error('Estado inválido')
             if (!latest || message.state.revision >= latest.revision) latest = message.state
             attempts = 0
             set_view({ state: latest, loading: false, error: '' })

@@ -51,5 +51,5 @@ it.each(['/partidos/match-1', '/matches/match-1'])('mantiene acceso directo a %s
   window.history.replaceState(null, '', path)
   render(<App />)
   expect(await screen.findByRole('img', { name: /Cancha del partido/ })).toBeInTheDocument()
-  expect(useMatchState).toHaveBeenCalledWith('match-1')
+  expect(useMatchState).toHaveBeenCalledWith('match-1', expect.any(Function))
 })
