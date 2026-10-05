@@ -113,34 +113,51 @@ export default function Home() {
 
           {/* Grilla para las tarjetas */}
           <div className="home-grid">
-          
+
+            <article className="home-card" aria-labelledby="home-card-match">
+              <div className="home-card-content">
+                <h2 id="home-card-match">Estado del partido</h2>
+                <p>Ingresá el ID del partido para consultar su estado actual.</p>
+              </div>
+              <form className="match-entry" onSubmit={(event) => {
+                event.preventDefault()
+                const id = new FormData(event.currentTarget).get('match_id').trim()
+                if (id) navigate(`/partidos/${encodeURIComponent(id)}`)
+              }}>
+                <label htmlFor="match_id">ID del partido</label>
+                <input id="match_id" name="match_id" required placeholder="Ingresá el ID del partido" />
+                <button className="home-action" type="submit">Ver partido</button>
+              </form>
+            </article>
+
+
             {/* Tarjeta de Comportamientos */}
             <article className="home-card" aria-labelledby="home-card-behaviors" aria-describedby="home-card-behaviors-desc">
               <div className="home-card-content">
-          
+
                 {/* Ícono de código */}
                 <div className="home-card-icon">
-                  <svg 
+                  <svg
                     viewBox="0 0 24 24"
-                    fill="none" 
-                    stroke="currentColor" 
+                    fill="none"
+                    stroke="currentColor"
                     strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                   </svg>
                 </div>
-          
+
                 {/* Información de la tarjeta */}
                 <div>
-                  <h2>Comportamientos</h2>
-                  <p>
+                  <h2 id="home-card-behaviors">Comportamientos</h2>
+                  <p id="home-card-behaviors-desc">
                   Define reglas, bloques y comportamientos para cada jugador antes de enviarlos al campo.
                   </p>
                 </div>
               </div>
 
               {/* Botón de acceso a la ruta */}
-              <Link 
-                to="/behaviors" 
+              <Link
+                to="/behaviors"
                 className="home-action"
               >
               VER COMPORTAMIENTOS

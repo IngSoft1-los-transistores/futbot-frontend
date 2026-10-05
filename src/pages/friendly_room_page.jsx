@@ -58,15 +58,24 @@ export default function FriendlyRoomPage() {
   const is_full = Boolean(room.homeClub && room.awayClub)
   const is_ready = room.status === ROOM_STATUS.READY_TO_START
 
+  function open_match(match_id) {
+    const behavior_names = Object.fromEntries(
+      [room.homeClub, room.awayClub].flatMap((club) => club?.players ?? [])
+        .filter((player) => player.behaviorId && player.behaviorName)
+        .map((player) => [player.behaviorId, player.behaviorName]),
+    )
+    navigate(`/partidos/${match_id}`, { state: { behavior_names } })
+  }
+
   async function handle_start() {
     const result = await start()
-    if (result) navigate(`/partidos/${result.matchId}`)
+    if (result) open_match(result.matchId)
   }
 
   let action
   if (room.matchId) {
     action = (
-      <Button onClick={() => navigate(`/partidos/${room.matchId}`)}>
+      <Button onClick={() => open_match(room.matchId)}>
         <Icon name="play" />
         Ir al partido
       </Button>

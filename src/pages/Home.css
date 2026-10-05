@@ -219,3 +219,29 @@
     grid-template-columns: 1fr;
   }
 }
+
+.home-card .match-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.home-card .match-entry input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #fff6;
+  border-radius: 5px;
+  background: #0b2a16;
+  color: #f3ecdd;
+}
+
+.home-card .match-entry input::placeholder {
+  color: #d5d5d5;
+}
+
+.home-card .match-entry input:focus-visible {
+  outline: 3px solid #f3ecdd;
+  outline-offset: 2px;
+}

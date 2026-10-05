@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import LandingPage from './landing_page';
+import LandingPage from '../src/pages/landing_page';
 
 // Same shape the login flow stores (see src/auth/session.js).
 const store_session = (expires_at) => {
