@@ -169,3 +169,79 @@
 .home-content > .home-action {
   align-self: flex-start;
 }
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.home-card {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  background: #0b2a16cc;
+  border: 1px solid #fff3;
+  border-radius: 16px;
+}
+
+.home-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.home-card-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: #1a2f4c;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+}
+
+.home-card h2 {
+  margin-bottom: 8px;
+  font-size: 24px;
+}
+
+.home-card p {
+  color: #d5d5d5;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+@media (max-width: 700px) {
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.home-card .match-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.home-card .match-entry input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #fff6;
+  border-radius: 5px;
+  background: #0b2a16;
+  color: #f3ecdd;
+}
+
+.home-card .match-entry input::placeholder {
+  color: #d5d5d5;
+}
+
+.home-card .match-entry input:focus-visible {
+  outline: 3px solid #f3ecdd;
+  outline-offset: 2px;
+}
