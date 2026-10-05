@@ -31,3 +31,6 @@ dist-ssr
 # Playwright
 playwright-report/
 test-results/
+
+# React Component Preview
+previewConfig.json

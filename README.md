@@ -145,3 +145,29 @@ npm run test:e2e
 
 
 
+
+## Estado actual del partido
+
+La sala amistosa abre `/partidos/:match_id` al iniciar o elegir “Ir al partido”.
+Esta ruta muestra la cancha completa, el marcador y las actualizaciones por
+WebSocket. `/matches/:match_id` sigue disponible para enlaces anteriores y la
+demo. Desde Home también se puede ingresar el ID manualmente.
+
+La conexión usa `/api/matches/{match_id}/ws`, con el token de sesión en el primer
+mensaje. `VITE_WS_URL` configura la dirección; si no existe, se deriva de
+`VITE_API_URL`. No se consulta periódicamente el estado por HTTP. Ante una
+interrupción, conserva el último estado, avisa y reconecta; ignora revisiones
+anteriores y cierra la conexión al finalizar el partido.
+
+La cabecera muestra los clubes participantes. No se presupone el formato del
+partido, ya que el snapshot actual no incluye ese dato. La cancha usa dimensiones
+provisionales de 100 × 60 con origen en el centro.
+
+Los nombres de los comportamientos se obtienen del catálogo (`/api/behaviors`)
+y de los datos de la sala al navegar. Si el snapshot incluye `behavior_name`,
+se prioriza ese valor. Un comportamiento privado del rival puede no estar en el
+catálogo: si no hay nombre disponible se muestra “Nombre no disponible”, sin
+exponer el UUID como etiqueta. Un fallo del catálogo no interrumpe el partido.
+
+Las acciones corresponden al último snapshot recibido, no a un historial completo.
+
