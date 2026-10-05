@@ -98,11 +98,17 @@ Funciona igual desde PowerShell, Git Bash, WSL, Linux y macOS.
 | `make test` | Corre los tests unitarios y, si pasan, los e2e |
 | `make test-unit` | Corre sólo los tests unitarios (Vitest), una vez |
 | `make test-e2e` | Corre sólo los tests e2e (Playwright) |
-| `make coverage` | Corre los tests unitarios y genera la cobertura en `coverage/index.html` |
+| `make coverage` | Corre las dos coberturas y calcula el total combinado |
+| `make coverage-unit` | Cobertura de los tests unitarios (Vitest), en `coverage/index.html` |
+| `make coverage-e2e` | Cobertura de los tests e2e (Playwright), en `coverage-e2e/index.html` |
 | `make lint` | Revisa el código con ESLint |
-| `make clean` | Borra `dist/`, `coverage/` y los reportes de Playwright. No toca `.env` ni `node_modules` |
+| `make clean` | Borra `dist/`, los tres reportes de cobertura y los de Playwright. No toca `.env` ni `node_modules` |
 
 `make test` devuelve código de salida distinto de 0 si algún test falla, así que sirve para CI.
+
+**Cómo leer la cobertura.** `make coverage` muestra tres tablas: la de los unitarios, la de los e2e y el **total** (`coverage-total/index.html`). El total no es la suma de las otras dos: muchas líneas las recorren ambas suites, así que se cuenta la unión, línea por línea. Por eso el total sólo informa **líneas**: sentencias, ramas y funciones las divide distinto cada herramienta y no se pueden combinar sin contar de más.
+
+La cobertura de los e2e se mide con Chromium sólo cuando se corre `make coverage-e2e` (o `make coverage`); `make test-e2e` no mide nada y no se vuelve más lento. El primer test de `tests/persistence.spec.js` abre su propio navegador para simular que se cierra y se vuelve a abrir, y queda fuera de la medición.
 
 Los tests e2e **no necesitan el backend**: simulan la API, y Playwright levanta su propio servidor de Vite en el puerto 5173. Por eso fallan si `make dev` ya está corriendo: hay que cortarlo antes. En Linux o WSL, si Chromium no arranca por librerías faltantes, correr una vez `sudo npx playwright install-deps`.
 
