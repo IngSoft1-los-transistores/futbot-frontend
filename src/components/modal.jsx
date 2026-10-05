@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import './modal.css';
 
 // Contenedor genérico de modal: se cierra con la tecla Escape
 export default function Modal({ title, description, onClose, children }) {
@@ -12,12 +13,12 @@ export default function Modal({ title, description, onClose, children }) {
   }, [onClose]);
 // Renderizamos el modal
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+    <div className="app-modal-overlay">
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-lg rounded-lg border border-[#2F5A36] bg-[#1E3B24] p-6 text-white shadow-2xl"
+        className="app-modal-dialog"
       >
         <h2 className="text-2xl font-bold">{title}</h2>
         {description && (
