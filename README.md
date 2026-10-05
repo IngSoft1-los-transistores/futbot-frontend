@@ -170,3 +170,4 @@ catálogo: si no hay nombre disponible se muestra “Nombre no disponible”, si
 exponer el UUID como etiqueta. Un fallo del catálogo no interrumpe el partido.
 
 Las acciones corresponden al último snapshot recibido, no a un historial completo.
+
