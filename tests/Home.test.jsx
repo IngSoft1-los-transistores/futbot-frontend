@@ -4,9 +4,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import Home from '../src/pages/Home'
 import { get_current_user } from '../src/api/client'
+import { createPlayer } from '../src/api/players'
 import { save_session } from '../src/auth/session'
 
 vi.mock('../src/api/client', () => ({ get_current_user: vi.fn(), logout: vi.fn() }))
+vi.mock('../src/api/players.js', () => ({ createPlayer: vi.fn() }))
 
 function Destination() {
   return <p>Destino: {useLocation().pathname}</p>
@@ -16,6 +18,7 @@ beforeEach(() => {
   vi.resetAllMocks()
   save_session({ access_token: 'token', refresh_token: 'refresh', club_id: 'club', expires_at: Date.now() / 1000 + 3600 })
   get_current_user.mockResolvedValue({ club_id: 'club' })
+  createPlayer.mockResolvedValue({})
 })
 
 afterEach(() => {
@@ -56,4 +59,11 @@ it('no navega cuando el ID contiene solo espacios', async () => {
   await user.type(screen.getByLabelText('ID del partido'), '   ')
   await user.click(screen.getByRole('button', { name: 'Ver partido' }))
   expect(screen.getByRole('heading', { name: 'Menú principal' })).toBeInTheDocument()
+})
+
+it('abre el modal de creación de jugador desde la tarjeta de Home', async () => {
+  const user = await mount()
+  await user.click(screen.getByRole('button', { name: 'CREAR JUGADOR' }))
+  expect(screen.getByRole('dialog', { name: 'Crear Jugador' })).toBeInTheDocument()
+  expect(screen.getByLabelText('Nombre')).toBeInTheDocument()
 })

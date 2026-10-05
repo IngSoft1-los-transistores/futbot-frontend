@@ -8,7 +8,7 @@ import BehaviorPage from './pages/behavior_page'
 import FriendlyRoomPage from './pages/friendly_room_page'
 import './styles/tokens.css'
 import './App.css'
-import ModalPlayer from './pages/modal_player'
+
 
 const Navbar = () => (
   <nav id="top-bar">
@@ -81,7 +81,6 @@ export default function App() {
         <Route path="/amistosos/:room_id/sala" element={<DashboardLayout><FriendlyRoomPage /></DashboardLayout>} />
         <Route path="/partidos/:match_id" element={<Match />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
-        <Route path="/modal" element={<ModalPlayer />} />
       </Routes>
     </BrowserRouter>
   )
