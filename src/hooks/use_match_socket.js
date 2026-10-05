@@ -5,13 +5,14 @@ import { parse_message } from '../match/protocol'
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8000'
 const BACKOFF = [500, 1000, 2000, 4000, 8000]
-// Códigos de cierre que indican token inválido/vencido (a confirmar con el backend).
-const UNAUTHORIZED_CODES = [1008, 4401]
+const MAX_ATTEMPTS = 10
+const MAX_INITIAL_ATTEMPTS = 3 
+const NORMAL_CLOSE = 1000
+// Códigos de cierre que indican token inválido/vencido
+const UNAUTHORIZED_CODES = [1008, 4401, 4403]
+const NOT_FOUND_CODE = 4404 // partido inexistente
 
-/**
- * Se suscribe al partido por WebSocket el backend ejecuta los comportamientos; acá solo se reciben y representan los resultados.
- */
-export function useMatchSocket(match_id) {
+export function useMatchSocket(match_id, role = 'player') {
   const [state, dispatch] = useReducer(match_reducer, initial_match_state)
 
   useEffect(() => {
@@ -19,7 +20,11 @@ export function useMatchSocket(match_id) {
     let ws
     let timer
     let attempts = 0
+    let received = false // llegó al menos un mensaje del servidor
+    let finished = false
     let disposed = false // evita doble conexión con StrictMode y fugas al desmontar
+
+    const closed = () => dispatch({ type: 'connection', value: 'closed' })
 
     const connect = () => {
       const session = read_session()
@@ -27,24 +32,31 @@ export function useMatchSocket(match_id) {
         window.dispatchEvent(new Event('futbot:unauthorized'))
         return
       }
-      ws = new WebSocket(`${WS_URL}/ws/matches/${match_id}?token=${encodeURIComponent(session.access_token)}`)
-      ws.onopen = () => {
-        attempts = 0
-        dispatch({ type: 'connection', value: 'open' })
-      }
+      const query = new URLSearchParams({ role, token: session.access_token })
+      ws = new WebSocket(`${WS_URL}/ws/match/${match_id}?${query}`)
+      ws.onopen = () => dispatch({ type: 'connection', value: 'open' })
       ws.onmessage = (e) => {
         const message = parse_message(e.data)
-        if (message) dispatch({ type: 'message', message })
+        if (!message) return
+        received = true
+        attempts = 0 
+        dispatch({ type: 'message', message })
+        if (message.event === 'MATCH_FINISHED') {
+          finished = true
+          ws.close(NORMAL_CLOSE)
+        }
       }
       ws.onclose = (e) => {
         if (disposed) return
+        if (finished || e.code === NORMAL_CLOSE || e.code === NOT_FOUND_CODE) return closed()
         if (UNAUTHORIZED_CODES.includes(e.code)) {
-          dispatch({ type: 'connection', value: 'closed' })
+          closed()
           window.dispatchEvent(new Event('futbot:unauthorized'))
           return
         }
+        if (attempts >= (received ? MAX_ATTEMPTS : MAX_INITIAL_ATTEMPTS)) return closed()
         dispatch({ type: 'connection', value: 'reconnecting' })
-        // Al reconectar el backend debe enviar un snapshot que resincroniza el estado.
+        // Al reconectar, el servidor envía MATCH_CONNECTED y los SIMULATION_TICK siguientes resincronizan todo.
         timer = setTimeout(connect, BACKOFF[Math.min(attempts++, BACKOFF.length - 1)])
       }
       ws.onerror = () => ws.close()
@@ -56,7 +68,7 @@ export function useMatchSocket(match_id) {
       clearTimeout(timer)
       ws?.close()
     }
-  }, [match_id])
+  }, [match_id, role])
 
   return { state, dismiss_error: (index) => dispatch({ type: 'dismiss_error', index }) }
 }

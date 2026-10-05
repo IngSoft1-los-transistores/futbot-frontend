@@ -1,11 +1,6 @@
 // ÚNICO lugar que conoce el formato de los mensajes del WebSocket del partido.
-// Si el contrato del backend difiere, se ajusta SOLO este archivo (y match_reducer.js).
-//
-// Formato asumido (JSON):
-//  { type: 'snapshot', seq, state: { status, tick, score:{home,away}, ball:{x,y}, players:[{id,team,x,y,action?}] } }
-//  { type: 'update',   seq, tick?, score?, ball?, players?:[{id,x,y,action?}], events?:[{type,player_id,...}] }
-//  { type: 'error',    message, player_id?, behavior_id? }
-//  { type: 'finished', seq?, score? }
+// Contrato: "api-contrato Transistores" (módulo Partido en Vivo).
+// Todos los mensajes del servidor tienen la forma { event: 'NOMBRE', payload: {...} }.
 
 const is_obj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
 const is_num = (v) => typeof v === 'number' && Number.isFinite(v)
@@ -17,13 +12,19 @@ export function parse_message(raw) {
   } catch {
     return null
   }
-  if (!is_obj(msg) || typeof msg.type !== 'string') return null
-  return msg
+  if (!is_obj(msg) || typeof msg.event !== 'string') return null
+  return { event: msg.event, payload: is_obj(msg.payload) ? msg.payload : {} }
 }
 
 export const normalize_player = (p) =>
-  is_obj(p) && p.id != null && is_num(p.x) && is_num(p.y)
-    ? { id: p.id, team: p.team, x: p.x, y: p.y, action: p.action }
+  is_obj(p) && p.playerId != null && is_num(p.x) && is_num(p.y)
+    ? { id: p.playerId, club_id: p.clubId, name: p.name, x: p.x, y: p.y, is_playing: p.isPlaying !== false }
     : null
 
-export const normalize_ball = (b) => (is_obj(b) && is_num(b.x) && is_num(b.y) ? { x: b.x, y: b.y } : null)
+export const normalize_ball = (b) =>
+  is_obj(b) && is_num(b.x) && is_num(b.y)
+    ? { x: b.x, y: b.y, vx: is_num(b.vx) ? b.vx : 0, vy: is_num(b.vy) ? b.vy : 0 }
+    : null
+
+export const normalize_score = (s) =>
+  is_obj(s) && is_num(s.home) && is_num(s.away) ? { home: s.home, away: s.away } : null
