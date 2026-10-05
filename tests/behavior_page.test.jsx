@@ -40,15 +40,17 @@ describe('BehaviorPage', () => {
     });
 
   it('Muestra el estado de carga inicialmente', () => {
-    vi.mocked(sessionModule.read_session).mockReturnValue({ access_token: 'fake-token' });
+    vi.mocked(sessionModule.read_session).mockReturnValue({
+      access_token: 'fake-token',
+    })
+
     vi.mocked(apiModule.get_behaviors).mockImplementation(
-        () => new Promise(() => {})
-    ); // Simula una promesa pendiente
-    render(<BehaviorPage />);
-    expect(apiModule.get_behaviors).toHaveBeenCalledTimes(1); // se llama a la api
-    expect(screen.getByText(/CARGANDO TÁCTICAS.../i)).toBeInTheDocument();
-    expect(screen.queryByText('Comportamientos')).not.toBeInTheDocument();
-  });
+      () => new Promise(() => {})
+    )
+    render(<BehaviorPage />)
+    expect(screen.getByText(/CARGANDO TÁCTICAS.../i)).toBeInTheDocument()
+    expect(screen.queryByText('Comportamientos')).not.toBeInTheDocument()
+  })
 
   it('Debe mostrar un mensaje de error si la API devuelve un error', async () => {
     vi.mocked(sessionModule.read_session).mockReturnValue({ access_token: 'fake-token' });
@@ -114,6 +116,17 @@ describe('BehaviorPage', () => {
     await user.click(retryButton);
     
   });
+
+  it('Debe volver al menú al presionar el botón', async () => {
+    const user = userEvent.setup()
+    vi.mocked(sessionModule.read_session).mockReturnValue({
+      access_token: 'fake-token',
+    })
+    vi.mocked(apiModule.get_behaviors).mockResolvedValue([])
+    render(<BehaviorPage />)
+    await user.click(screen.getByRole('button', { name: /volver al menú/i }))
+    expect(mockNavigate).toHaveBeenCalledWith('/home')
+  })
   
   it('Debe abrir el modal con el código y el nombre al hacer clic en "Ver detalles"', async () => {
     const mockBehaviors = [

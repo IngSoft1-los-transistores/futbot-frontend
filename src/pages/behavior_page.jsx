@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { read_session } from '../auth/session.js'
 import { get_behaviors } from '../api/behaviors';
 import BehaviorRow from '../components/behavior_row'
@@ -40,6 +40,14 @@ export default function BehaviorPage() {
 
     return (
         <div className="flex flex-col w-full max-w-5xl mx-auto pt-6 text-white">
+        
+            <button
+                type="button"
+                className="home-action mb-4 self-start"
+                onClick={() => navigate('/home')}
+            >
+            ← Volver al menú
+            </button>
             {/* Cargando */}
             {status === 'loading' && (
                 <div className="flex flex-col items-center gap-4">
