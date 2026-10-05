@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures.js'
 
 async function seed(page, expires_at) {
   await page.goto('/login')
