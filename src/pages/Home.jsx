@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { get_current_user, logout as logout_session } from '../api/client'
 import { clear_session, read_session, save_session } from '../auth/session'
+import CreateFriendlyModal from '../components/CreateFriendlyModal'
 import './Home.css'
 
 export default function Home() {
@@ -10,6 +11,7 @@ export default function Home() {
   const [error, set_error] = useState('')
   const [attempt, set_attempt] = useState(0)
   const [closing, set_closing] = useState(false)
+  const [create_open, set_create_open] = useState(false)
 
   useEffect(() => {
     const session = read_session()
@@ -78,11 +80,12 @@ export default function Home() {
     }
   }
 
+  
   return (
     <div className="home-page">
       <header className="home-topbar">
         <div className="home-identity">
-          <span className="home-mark"><HomeIcon /></span>
+          <span className="home-mark"><HomeIcon/></span>
           <div>
             <p className="home-product">FutBot</p>
             <p className="home-project">laboratorio / presión alta v4</p>
@@ -163,10 +166,45 @@ export default function Home() {
               VER COMPORTAMIENTOS
               </Link>
             </article>
+
+            {/* Tarjeta de Privados */}
+          
+            <article className="home-card" aria-labelledby="home-card-privates" aria-describedby="home-card-privates-desc">
+            <div className="home-card-content">
+
+              {/* Icono de Privados */}
+              <div className="home-card-icon">
+                <svg viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0110 0v4" />
+                </svg>
+              </div>
+
+              {/* Informacion de la tarjeta */}
+              <div>
+                <h2>Unirse a liga privada / Amistoso</h2>
+                <p>
+                  Únete a una liga privada o crea un partido amistoso con invitaciones personalizadas
+                </p>
+              </div>
+            </div>
+              {/* Boton de apertura del modal */}
+              <button className="home-action" onClick={() => set_create_open(true)}>
+               CREAR
+              </button> 
+            </article>
           </div>
         </>
         )}
       </main>
+
+      <CreateFriendlyModal
+        isOpen={create_open}
+        onClose={() => set_create_open(false)}
+      />
     </div>
   )
 }
