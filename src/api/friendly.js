@@ -1,5 +1,5 @@
 // src/api/friendly.js
-import { request } from './client';
+import { request } from './client'
 
 export async function createFriendlyRoom(squadData) {
   return request('/api/friendly/rooms', {
