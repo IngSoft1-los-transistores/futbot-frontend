@@ -1,4 +1,3 @@
-import React from 'react';
 import './SquadSelector.css'
 
 export default function SquadSelector({ players, behaviors, squad, setSquad}) {

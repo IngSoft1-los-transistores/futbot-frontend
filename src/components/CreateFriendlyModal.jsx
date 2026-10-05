@@ -1,9 +1,14 @@
-import React, { useState , useEffect } from "react"
+import { useState, useEffect } from "react"
 import { createFriendlyRoom , getMyPlayers , getMyBehaviors } from "../api/friendly"
 import SquadSelector from './SquadSelector'
 import './CreateFriendlyModal.css'
 
 export default function CreateFriendlyModal({ isOpen, onClose }) {
+    if (!isOpen) return null
+    return <CreateFriendlyModalContent onClose={onClose} />
+}
+
+function CreateFriendlyModalContent({ onClose }) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [players, setPlayers] = useState([])
@@ -17,19 +22,13 @@ export default function CreateFriendlyModal({ isOpen, onClose }) {
     const [createdRoom, setCreatedRoom] = useState(null)
 
     useEffect(() => {
-        if (isOpen) {
-            setError(null)
-            setCreatedRoom(null)
-            Promise.all([getMyPlayers(), getMyBehaviors()])
-                .then(([playersData, behaviorsData]) => {
-                    setPlayers(playersData)
-                    setBehaviors(behaviorsData)
-                })
-                .catch(() => setError('Error al cargar la pantalla de jugadores y estrategias.'))
-        }
-    }, [isOpen])
-
-    if (!isOpen) return null
+        Promise.all([getMyPlayers(), getMyBehaviors()])
+            .then(([playersData, behaviorsData]) => {
+                setPlayers(playersData)
+                setBehaviors(behaviorsData)
+            })
+            .catch(() => setError('Error al cargar la pantalla de jugadores y estrategias.'))
+    }, [])
 
     const isSquadComplete = () => {
         const isSlotValid = (slot) => slot.playerId !== '' && slot.behaviorId !== ''
