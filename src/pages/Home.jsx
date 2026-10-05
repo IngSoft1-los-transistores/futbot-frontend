@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { get_current_user, logout as logout_session } from '../api/client'
 import { clear_session, read_session, save_session } from '../auth/session'
 import './Home.css'
@@ -113,6 +113,7 @@ export default function Home() {
           </button>
         )}
         {status === 'ready' && (
+        <>
           <section className="home-welcome" aria-labelledby="home-title">
             <h1 id="home-title">Menú principal</h1>
             <p>Bienvenido a tu club. Prepará tu equipo, diseñá tu estrategia y elegí tu próximo desafío.</p>
@@ -120,6 +121,61 @@ export default function Home() {
               Unirse a un amistoso
             </button>
           </section>
+
+          {/* Grilla para las tarjetas */}
+          <div className="home-grid">
+
+            <article className="home-card" aria-labelledby="home-card-match">
+              <div className="home-card-content">
+                <h2 id="home-card-match">Estado del partido</h2>
+                <p>Ingresá el ID del partido para consultar su estado actual.</p>
+              </div>
+              <form className="match-entry" onSubmit={(event) => {
+                event.preventDefault()
+                const id = new FormData(event.currentTarget).get('match_id').trim()
+                if (id) navigate(`/partidos/${encodeURIComponent(id)}`)
+              }}>
+                <label htmlFor="match_id">ID del partido</label>
+                <input id="match_id" name="match_id" required placeholder="Ingresá el ID del partido" />
+                <button className="home-action" type="submit">Ver partido</button>
+              </form>
+            </article>
+
+
+            {/* Tarjeta de Comportamientos */}
+            <article className="home-card" aria-labelledby="home-card-behaviors" aria-describedby="home-card-behaviors-desc">
+              <div className="home-card-content">
+
+                {/* Ícono de código */}
+                <div className="home-card-icon">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                </div>
+
+                {/* Información de la tarjeta */}
+                <div>
+                  <h2 id="home-card-behaviors">Comportamientos</h2>
+                  <p id="home-card-behaviors-desc">
+                  Define reglas, bloques y comportamientos para cada jugador antes de enviarlos al campo.
+                  </p>
+                </div>
+              </div>
+
+              {/* Botón de acceso a la ruta */}
+              <Link
+                to="/behaviors"
+                className="home-action"
+              >
+              VER COMPORTAMIENTOS
+              </Link>
+            </article>
+          </div>
+        </>
         )}
       </main>
        <JoinFriendlyModal

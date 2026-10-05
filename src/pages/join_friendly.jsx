@@ -131,9 +131,8 @@ export default function JoinFriendly() {
 
   // --- Confirmar ---
 
-  // AJUSTAR: el contrato usa 400 para "sala completa" y para "jugadores inválidos".
-  // Se distinguen por el texto del mensaje; si el backend envía un error_code distinto
-  // para cada caso, conviene usarlo (cause.error_code) en vez de estos patrones.
+  // AVISO: el contrato usa 400 para "sala completa" y para "jugadores inválidos".
+  // Se distinguen por el texto del mensaje
   function handle_join_error(cause) {
     if (cause.status === 404) {
       set_notice({ kind: 'invalid_room', title: 'La sala no existe', message: 'El ID o el código de la sala no son válidos. Podés ingresar otros.' })
