@@ -76,7 +76,6 @@ export default function JoinFriendly() {
   useEffect(() => {
     if (!has_room) return
     const controller = new AbortController()
-    set_load_status('loading')
     Promise.all([
       list_players({ signal: controller.signal }),
       list_behaviors({ signal: controller.signal }),
@@ -168,6 +167,7 @@ export default function JoinFriendly() {
   function retry_selection() {
     set_notice(null)
     set_selection(EMPTY_SELECTION)    // empieza la selección de nuevo
+    set_load_status('loading')        // muestra "cargando..." mientras recarga
     set_attempt((current) => current + 1)    // y recarga los jugadores por si cambiaron
   }
 
@@ -198,7 +198,12 @@ export default function JoinFriendly() {
         {load_status === 'loading' && <div className="home-notice" role="status">Cargando tus jugadores…</div>}
         {load_status === 'error' && <>
           <p className="home-notice home-error" role="alert">{load_error}</p>
-          <button className="home-action" onClick={() => set_attempt(attempt + 1)}>Reintentar</button>
+          <button
+          className="home-action"
+          onClick={() => { set_load_error(''); set_load_status('loading'); set_attempt(attempt + 1)}}
+          >
+            Reintentar
+          </button>
         </>}
 
         {load_status === 'ready' && <>
