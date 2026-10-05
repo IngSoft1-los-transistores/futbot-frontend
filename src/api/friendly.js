@@ -27,7 +27,7 @@ const MOCK_BEHAVIORS = [
 
 export async function getMyPlayers() {
   try {
-    return await request('/api/players/me');
+    return await request('/api/players');
   } catch (error) {
     if (error.status === 404) {
       console.warn('Endpoint /api/players/me dio 404. Usando datos mock de jugadores.');
@@ -39,7 +39,7 @@ export async function getMyPlayers() {
 
 export async function getMyBehaviors() {
   try {
-    return await request('/api/behaviors/me');
+    return await request('/api/behaviors');
   } catch (error) {
     if (error.status === 404) {
       console.warn('Endpoint /api/behaviors/me dio 404. Usando datos mock de comportamientos.');

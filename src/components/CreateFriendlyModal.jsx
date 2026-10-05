@@ -1,9 +1,11 @@
+import { useNavigate } from 'react-router-dom'
 import React, { useState , useEffect } from "react"
 import { createFriendlyRoom , getMyPlayers , getMyBehaviors } from "../api/friendly"
 import SquadSelector from './SquadSelector'
 import './CreateFriendlyModal.css'
 
 export default function CreateFriendlyModal({ isOpen, onClose }) {
+    const navigate = useNavigate()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [players, setPlayers] = useState([])
@@ -87,7 +89,9 @@ export default function CreateFriendlyModal({ isOpen, onClose }) {
               <div><strong>Código de Sala:</strong> <span className="room-code">{createdRoom.roomCode || createdRoom.room_code}</span></div>
               <div><small>ID: {createdRoom.roomId || createdRoom.room_id}</small></div>
             </div>
-            <div className="status-badge">Estado: Esperando a un rival (waitingGuest)</div>
+            <button className="home-action" onClick={() => {
+              const roomID = createdRoom.roomId || createdRoom.room_id
+              navigate(`/amistosos/${roomID}/sala`)}}>INICIAR</button>
             <button className="home-action" onClick={onClose}>Cerrar</button>
           </div>
         ) : (
