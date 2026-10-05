@@ -179,3 +179,23 @@
   outline: 2px solid currentColor;
   outline-offset: 4px;
 }
+
+.behavior-modal {
+  max-width: 800px;
+}
+
+.behavior-code {
+  max-height: 60vh;
+  overflow: auto;
+  margin: 0 0 24px;
+  padding: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #0b2a16;
+  border: 1px solid #2a5235;
+  border-radius: 8px;
+  color: #f3ecdd;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}

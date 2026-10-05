@@ -1,5 +1,5 @@
 
-function BehaviorRow({ name, code, isDefault }) {
+function BehaviorRow({ name, code, isDefault, onDetails }) {
     return (
         <div className="flex items-center px-6 py-4 border-b border-green-900/30 hover:bg-[#112419]/50 transition-colors">
             
@@ -21,7 +21,7 @@ function BehaviorRow({ name, code, isDefault }) {
                 {/* Botón  */}
                 <button 
                     className="border border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b] px-3 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
-                    onClick={() => alert(`Funcionalidad en desarrollo. Estará disponible próximamente.`)}
+                    onClick={onDetails}
                 >
                     Ver detalles
                 </button>

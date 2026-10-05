@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { read_session } from '../auth/session.js'
 import { get_behaviors } from '../api/behaviors';
 import BehaviorRow from '../components/behavior_row'
+import BehaviorModal from '../components/behavior_modal'
 
 export default function BehaviorPage() {
     const navigate = useNavigate()
     const [status, set_status] = useState('loading')
     const [behavior_list, set_behavior_list] = useState([])
+    const [selected_behavior, set_selected_behavior] = useState(null)
     const [error, set_error] = useState(null)
 
     useEffect(() => {
@@ -81,10 +83,16 @@ export default function BehaviorPage() {
                                     key={behavior_element.id}
                                     name={behavior_element.name} 
                                     code={behavior_element.code}
-                                    isDefault={behavior_element.isDefault} 
+                                    isDefault={behavior_element.isDefault}
+                                    onDetails={() => set_selected_behavior(behavior_element)} 
                                 />
                             )
                         })}
+                        {/* Model de detalles */}
+                        <BehaviorModal
+                            behavior={selected_behavior}
+                            onClose={() => set_selected_behavior(null)}
+                        />
                     </div>
                 </div>
             )}
