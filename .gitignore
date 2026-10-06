@@ -28,6 +28,11 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Cobertura (Vitest, Playwright y el total combinado)
+coverage/
+coverage-e2e/
+coverage-total/
+
 # Playwright
 playwright-report/
 test-results/
