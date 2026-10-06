@@ -7,7 +7,16 @@ const project = ({ x, y }) => ({
   y: 311 - Math.max(-0.5, Math.min(0.5, y / FIELD_HEIGHT)) * 554,
 })
 
-export default function MatchPitch({ state }) {
+export default function MatchPitch({ state, protocol_state }) {
+  const players = state.players.length ? state.players : Object.values(protocol_state?.players ?? {}).map((player) => ({
+    player_id: player.id,
+    club_id: player.club_id,
+    name: player.name ?? `Jugador ${player.id}`,
+    on_field: player.is_playing,
+    has_ball: false,
+    position: { x: player.x, y: player.y },
+  }))
+  const ball = state.ball ?? protocol_state?.ball
   return (
     <svg className="match-pitch" viewBox="0 0 1296 622" role="img" aria-label="Cancha del partido con las posiciones de los jugadores y la pelota">
       <g className="match-pitch-stripes" aria-hidden="true">
@@ -20,10 +29,10 @@ export default function MatchPitch({ state }) {
         <circle cx="648" cy="311" r="69" />
         <circle className="match-pitch-center" cx="648" cy="311" r="5" />
       </g>
-      {state.players.filter((player) => player.on_field && player.position).map((player) => {
+      {players.filter((player) => player.on_field && player.position).map((player) => {
         const point = project(player.position)
         const home = player.club_id === state.home_club.club_id
-        const number = state.players.filter((item) => item.club_id === player.club_id).findIndex((item) => item.player_id === player.player_id) + 1
+        const number = players.filter((item) => item.club_id === player.club_id).findIndex((item) => item.player_id === player.player_id) + 1
         return (
           <g key={player.player_id} className={`match-pitch-player match-pitch-player--${home ? 'home' : 'away'}`} transform={`translate(${point.x} ${point.y})`}>
             <title>{player.name} · {home ? state.home_club.name : state.away_club.name}{player.has_ball ? ' · Con pelota' : ''}</title>
@@ -33,7 +42,7 @@ export default function MatchPitch({ state }) {
           </g>
         )
       })}
-      {state.ball && <g className="match-pitch-ball" transform={`translate(${project(state.ball).x} ${project(state.ball).y})`}><title>Pelota</title><circle r="9" /><path d="m0-4 4 3-2 5h-4l-2-5Z" /></g>}
+      {ball && <g className="match-pitch-ball" transform={`translate(${project(ball).x} ${project(ball).y})`}><title>Pelota</title><circle r="9" /><path d="m0-4 4 3-2 5h-4l-2-5Z" /></g>}
     </svg>
   )
 }
