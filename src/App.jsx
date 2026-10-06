@@ -8,6 +8,7 @@ import BehaviorPage from './pages/behavior_page'
 import FriendlyRoomPage from './pages/friendly_room_page'
 import './styles/tokens.css'
 import './App.css'
+import JoinFriendly from './pages/join_friendly'
 
 
 const Navbar = () => (
@@ -78,6 +79,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/matches/:match_id" element={<Match />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/friendly/join" element={<JoinFriendly />} />
         <Route path="/amistosos/:room_id/sala" element={<DashboardLayout><FriendlyRoomPage /></DashboardLayout>} />
         <Route path="/partidos/:match_id" element={<Match />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
