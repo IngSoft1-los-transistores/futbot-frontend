@@ -1,4 +1,5 @@
-import { chromium, expect, test } from '@playwright/test'
+import { chromium } from '@playwright/test'
+import { expect, test } from './fixtures.js'
 
 const session = { expires_at: Math.floor(Date.now() / 1000) + 300, access_token: 'old-access', refresh_token: 'old-refresh', club_id: 'club' }
 
