@@ -1,13 +1,13 @@
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import Match from '../src/pages/Match'
-import { connect_match_state } from '../src/api/matches'
+import { connect_match_state, retry_match_start } from '../src/api/matches'
 import { get_behaviors } from '../src/api/behaviors'
 import { save_session } from '../src/auth/session'
 
 vi.mock('../src/api/behaviors', () => ({ get_behaviors: vi.fn() }))
-vi.mock('../src/api/matches', () => ({ connect_match_state: vi.fn() }))
+vi.mock('../src/api/matches', () => ({ connect_match_state: vi.fn(), retry_match_start: vi.fn() }))
 const snapshot = (changes = {}) => ({
   match_id: 'match-1', revision: 1, status: 'in_progress',
   home_club: { club_id: 'home', name: 'Local FC' }, away_club: { club_id: 'away', name: 'Visitante FC' },
@@ -47,6 +47,26 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); localStorage.clear(); sessionStorage.clear() })
 
 describe('Estado del partido por WebSocket', () => {
+  it('permite reintentar un partido sin estado y muestra la cancha al recibirlo', async () => {
+    retry_match_start.mockResolvedValue({ status: 'started' })
+    mount()
+    await emit(() => sockets[0].message({ type: 'error', status: 409 }))
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Reintentar inicio' })))
+    expect(retry_match_start).toHaveBeenCalledWith('match-1')
+    await emit(() => sockets[0].state())
+    expect(screen.queryByRole('button', { name: 'Reintentar inicio' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Marcador: 0 a 0')).toBeInTheDocument()
+  })
+
+  it('muestra el error si no se puede reintentar el inicio', async () => {
+    retry_match_start.mockRejectedValue(new Error('No tenes acceso a este partido'))
+    mount()
+    await emit(() => sockets[0].message({ type: 'error', status: 409 }))
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Reintentar inicio' })))
+    expect(screen.getByText('No tenes acceso a este partido')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reintentar inicio' })).toBeEnabled()
+  })
+
   it('autentica y actualiza marcador, cancha y acciones sin abrir más conexiones', async () => {
     mount()
     await emit(() => { sockets[0].open(); sockets[0].state() })

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ROOM_STATUS } from '../api/friendly_rooms'
 import Button from '../components/atoms/button'
@@ -36,7 +37,8 @@ function error_message(error, fallback) {
 export default function FriendlyRoomPage() {
   const { room_id } = useParams()
   const navigate = useNavigate()
-  const { room, load_error, is_starting, start_error, start } = useFriendlyRoom(room_id)
+  const { room, load_error, is_starting, start_error, start, refresh } = useFriendlyRoom(room_id)
+  const [view_message, set_view_message] = useState('')
 
   if (load_error) {
     return (
@@ -72,21 +74,30 @@ export default function FriendlyRoomPage() {
     if (result) open_match(result.matchId)
   }
 
-  let action
-  if (room.matchId) {
-    action = (
-      <Button onClick={() => open_match(room.matchId)}>
-        <Icon name="play" />
-        Ir al partido
-      </Button>
-    )
-  } else {
+  async function handle_view_match() {
+    set_view_message('')
+    try {
+      const latest_room = await refresh()
+      if (latest_room.matchId) {
+        open_match(latest_room.matchId)
+      } else {
+        set_view_message('El partido todavía no comenzó. Cuando un club lo inicie, pulsá Ver partido nuevamente.')
+      }
+    } catch {
+      set_view_message('No se pudo actualizar la sala. Intentá nuevamente.')
+    }
+  }
+
+  let start_action
+  if (room.status === ROOM_STATUS.CANCELLED) {
+    start_action = null
+  } else if (!room.matchId) {
     let label = 'Iniciar partido'
     if (is_starting) label = 'Iniciando…'
     else if (!is_full) label = 'Esperando rival'
     else if (!is_ready) label = 'Sala no disponible'
 
-    action = (
+    start_action = (
       <Button
         onClick={handle_start}
         disabled={!is_full || !is_ready}
@@ -98,6 +109,21 @@ export default function FriendlyRoomPage() {
     )
   }
 
+  const actions = (
+    <>
+      {start_action}
+      {room.status !== ROOM_STATUS.CANCELLED && (
+        <Button variant="ghost" onClick={handle_view_match}>
+          <Icon name="play" />
+          Ver partido
+        </Button>
+      )}
+      <Button variant="ghost" onClick={() => navigate('/home')}>
+        Volver a la página principal
+      </Button>
+    </>
+  )
+
   return (
     <main className="fb-room-page">
       <RoomHeader
@@ -105,12 +131,13 @@ export default function FriendlyRoomPage() {
         status={STATUS_CHIPS[room.status] ?? { label: room.status, variant: 'default' }}
         description="Cuando ambos clubes estén en la sala, cualquiera de los dos puede iniciar el partido."
         roomCode={room.roomCode}
-        actions={action}
+        actions={actions}
       />
 
       {start_error && (
         <Alert>{error_message(start_error, 'No se pudo iniciar el partido.')}</Alert>
       )}
+      {view_message && <Alert variant="info">{view_message}</Alert>}
 
       <div className="fb-room-page__teams">
         <TeamPanel club={room.homeClub} side="home" />

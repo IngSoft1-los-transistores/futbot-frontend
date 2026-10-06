@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useState } from 'react'
 import { get_behaviors } from '../api/behaviors'
+import { retry_match_start } from '../api/matches'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import useMatchState from '../hooks/use_match_state'
 import MatchPitch from '../components/match_pitch'
@@ -99,7 +100,22 @@ function MatchView({ match_id, room_behavior_names }) {
     const message = parse_match_message(raw)
     if (message) dispatch_protocol({ type: 'message', message })
   }, [])
-  const { state, error, loading } = useMatchState(match_id, receive_protocol_message)
+  const { state, error, loading, waiting_for_start } = useMatchState(match_id, receive_protocol_message)
+  const [retrying_start, set_retrying_start] = useState(false)
+  const [start_error, set_start_error] = useState('')
+
+  async function retry_start() {
+    if (retrying_start) return
+    set_retrying_start(true)
+    set_start_error('')
+    try {
+      await retry_match_start(match_id)
+    } catch (cause) {
+      set_start_error(cause.message || 'No se pudo iniciar el partido.')
+    } finally {
+      set_retrying_start(false)
+    }
+  }
   const [behavior_names, set_behavior_names] = useState({})
   const has_state = Boolean(state)
 
@@ -132,6 +148,12 @@ function MatchView({ match_id, room_behavior_names }) {
       <h1 className="match-sr-only">Estado del partido</h1>
       {loading && <p role="status">Cargando partido…</p>}
       {error && <div className="match-warning" role="alert">{error}{state && <p>Se muestra el último estado recibido; puede estar desactualizado.</p>}</div>}
+      {waiting_for_start && !state && <div>
+        <button className="home-action" disabled={retrying_start} onClick={retry_start}>
+          {retrying_start ? 'Iniciando…' : 'Reintentar inicio'}
+        </button>
+        {start_error && <p role="alert">{start_error}</p>}
+      </div>}
       {state && <>
         <section className="match-scoreboard" aria-label="Marcador" aria-live="polite">
           <div className="match-score">

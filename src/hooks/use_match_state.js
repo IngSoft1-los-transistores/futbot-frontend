@@ -120,7 +120,7 @@ export default function useMatchState(match_id, on_protocol_message) {
                 return
               }
               if (message.status === 409) {
-                set_view({ state: latest, loading: false, error: 'Esperando el estado inicial del partido. Se actualizará automáticamente.' })
+                set_view({ state: latest, loading: false, waiting_for_start: !latest, error: 'Esperando el estado inicial del partido. Se actualizará automáticamente.' })
                 return
               }
               retry()

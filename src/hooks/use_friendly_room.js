@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { get_friendly_room, start_friendly_match } from '../api/friendly_rooms'
 
-// Loads the room once on mount; live updates belong to the room WebSocket.
+// Loads the room on mount and refreshes it on explicit user actions.
 // Named useXxx (not snake_case) so the react-hooks lint rules recognize it.
 export function useFriendlyRoom(room_id) {
   const [room, set_room] = useState(null)
@@ -33,5 +33,11 @@ export function useFriendlyRoom(room_id) {
     }
   }, [room_id])
 
-  return { room, load_error, is_starting, start_error, start }
+  const refresh = useCallback(async () => {
+    const data = await get_friendly_room(room_id)
+    set_room(data)
+    return data
+  }, [room_id])
+
+  return { room, load_error, is_starting, start_error, start, refresh }
 }
