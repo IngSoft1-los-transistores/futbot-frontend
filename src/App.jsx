@@ -10,6 +10,7 @@ import './styles/tokens.css'
 import './App.css'
 import JoinFriendly from './pages/join_friendly'
 
+
 const Navbar = () => (
   <nav id="top-bar">
     <div className="flex items-center gap-3">

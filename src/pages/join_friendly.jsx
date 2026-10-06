@@ -1,37 +1,66 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { join_friendly_room, list_behaviors, list_players } from '../api/client'
+import {
+  join_friendly_room,
+  list_behaviors,
+  list_players,
+} from '../api/client'
 import { read_session } from '../auth/session'
 import JoinFriendlyModal from '../components/join_friendly_modal'
+import SquadSelector from '../components/SquadSelector'
 import './Home.css'
 import './join_friendly.css'
 
-const STARTER_COUNT = 3
-const SUBSTITUTE_COUNT = 3
-const TOTAL_COUNT = STARTER_COUNT + SUBSTITUTE_COUNT
-const GROUPS = [
-  { key: 'starters', label: 'Titulares', singular: 'Titular', count: STARTER_COUNT },
-  { key: 'substitutes', label: 'Suplentes', singular: 'Suplente', count: SUBSTITUTE_COUNT },
-]
-const EMPTY_SELECTION = { starters: [], substitutes: [] }
+const EMPTY_SQUAD = () => ({
+  starters: Array.from({ length: 3 }, () => ({
+    playerId: '',
+    behaviorId: '',
+  })),
+  substitutes: Array.from({ length: 3 }, () => ({
+    playerId: '',
+    behaviorId: '',
+  })),
+})
 
-// Ventana emergente de aviso. Escape no la cierra: hay que elegir una de sus acciones.
+const ERROR_MESSAGES = {
+  UNAUTHORIZED: 'Tu sesión no es válida o venció. Iniciá sesión nuevamente.',
+  ROOM_NOT_FOUND: 'La sala no existe o el ID no es válido.',
+  MATCH_ALREADY_STARTED: 'El partido ya fue iniciado y no admite nuevos participantes.',
+  INVALID_SQUAD:
+    'La selección de jugadores o comportamientos no es válida. Revisá los seis puestos.',
+  ROOM_NOT_FULL: 'La sala todavía no está completa para iniciar el partido.',
+  ROOM_NOT_READY: 'La sala no está en condiciones de iniciar el partido.',
+  NOT_ROOM_MEMBER: 'Tu club no pertenece a esta sala.',
+}
+
+// Ventana de aviso. Se cierra usando las acciones que muestra el aviso.
 function NoticeDialog({ notice, children }) {
   const dialog_ref = useRef(null)
 
   useEffect(() => {
     const dialog = dialog_ref.current
-    if (notice && !dialog.open) dialog.showModal()
-    if (!notice && dialog.open) dialog.close()
+    if (!dialog) return
+
+    if (notice && !dialog.open) {
+      dialog.showModal()
+    } else if (!notice && dialog.open) {
+      dialog.close()
+    }
   }, [notice])
 
   return (
-    <dialog ref={dialog_ref} className="join-notice" onCancel={(event) => event.preventDefault()}>
-      {notice && <>
-        <h2>{notice.title}</h2>
-        <p role="alert">{notice.message}</p>
-        <div className="join-actions">{children}</div>
-      </>}
+    <dialog
+      ref={dialog_ref}
+      className="join-notice"
+      onCancel={(event) => event.preventDefault()}
+    >
+      {notice && (
+        <>
+          <h2>{notice.title}</h2>
+          <p role="alert">{notice.message}</p>
+          <div className="join-actions">{children}</div>
+        </>
+      )}
     </dialog>
   )
 }
@@ -40,135 +69,248 @@ export default function JoinFriendly() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // La sala llega desde el modal de Home. Si se recarga la página, el state se pierde.
-  const [room, set_room] = useState(
-    location.state?.room_id ? { room_id: location.state.room_id, code: location.state.code } : null
+  const [room, set_room] = useState(() =>
+    location.state?.room_id
+      ? {
+          room_id: location.state.room_id,
+          code: location.state.code,
+        }
+      : null
   )
+
   const has_room = Boolean(room)
 
   const [players, set_players] = useState([])
   const [behaviors, set_behaviors] = useState([])
+  const [squad, set_squad] = useState(EMPTY_SQUAD)
   const [load_status, set_load_status] = useState('loading')
   const [load_error, set_load_error] = useState('')
   const [attempt, set_attempt] = useState(0)
-
-  const [selection, set_selection] = useState(EMPTY_SELECTION)
   const [submitting, set_submitting] = useState(false)
   const [notice, set_notice] = useState(null)
   const [change_open, set_change_open] = useState(false)
 
-  // Sin sesión o sin sala: no hay nada que hacer acá
+  // Verifica sesión y existencia de la sala recibida desde Home.
   useEffect(() => {
     if (!read_session()) {
       navigate('/login', { replace: true })
       return
     }
+
     if (!has_room) {
       navigate('/home', { replace: true })
       return
     }
-    const unauthorized = () => navigate('/login', { replace: true })
+
+    const unauthorized = () => {
+      navigate('/login', { replace: true })
+    }
+
     window.addEventListener('futbot:unauthorized', unauthorized)
-    return () => window.removeEventListener('futbot:unauthorized', unauthorized)
+
+    return () => {
+      window.removeEventListener('futbot:unauthorized', unauthorized)
+    }
   }, [navigate, has_room])
 
-  // Carga los jugadores y comportamientos del club
+  // Carga jugadores y comportamientos. AbortController evita actualizar
+  // el estado si el usuario sale de la pantalla durante la petición.
   useEffect(() => {
     if (!has_room) return
+
     const controller = new AbortController()
-    Promise.all([
-      list_players({ signal: controller.signal }),
-      list_behaviors({ signal: controller.signal }),
-    ]).then(([loaded_players, loaded_behaviors]) => {
-      if (controller.signal.aborted) return
-      set_players(loaded_players)
-      set_behaviors(loaded_behaviors)
-      set_load_status('ready')
-    }).catch((cause) => {
-      if (controller.signal.aborted || cause.name === 'AbortError') return
-      set_load_error(cause.status ? cause.message : 'No se pudo conectar con el servidor.')
-      set_load_status('error')
-    })
+
+    async function load_data() {
+      set_load_status('loading')
+      set_load_error('')
+
+      try {
+        const [loaded_players, loaded_behaviors] = await Promise.all([
+          list_players({ signal: controller.signal }),
+          list_behaviors({ signal: controller.signal }),
+        ])
+
+        if (controller.signal.aborted) return
+
+        set_players(loaded_players)
+        set_behaviors(loaded_behaviors)
+        set_load_status('ready')
+      } catch (cause) {
+        if (controller.signal.aborted || cause.name === 'AbortError') {
+          return
+        }
+
+        set_load_error(
+          cause.message || 'No se pudieron cargar tus jugadores y comportamientos.'
+        )
+        set_load_status('error')
+      }
+    }
+
+    load_data()
+
     return () => controller.abort()
   }, [attempt, has_room])
 
   if (!room) return null
 
-  // --- Selección ---
+  const is_squad_complete = (team) => {
+    const all_slots = [...team.starters, ...team.substitutes]
 
-  const selected_ids = new Set(GROUPS.flatMap((group) => selection[group.key].map((entry) => entry.player_id)))
-  const available = players.filter((player) => !selected_ids.has(player.id))
-  const total_selected = selected_ids.size
-  const without_behavior = GROUPS.flatMap((group) => selection[group.key]).filter((entry) => !entry.behavior_id).length
-  const is_complete = GROUPS.every((group) => selection[group.key].length === group.count) && without_behavior === 0
-
-  function player_name(player_id) {
-    return players.find((player) => player.id === player_id)?.name ?? player_id
+    return (
+      all_slots.length === 6 &&
+      all_slots.every(
+        (slot) =>
+          slot.playerId !== '' &&
+          slot.playerId != null &&
+          slot.behaviorId !== '' &&
+          slot.behaviorId != null
+      ) &&
+      new Set(all_slots.map((slot) => String(slot.playerId))).size === 6
+    )
   }
 
-  function add_player(group, player_id) {
-    set_selection((current) => {
-      const target = GROUPS.find((item) => item.key === group)
-      if (current[group].length >= target.count) return current           // grupo completo
-      return { ...current, [group]: [...current[group], { player_id, behavior_id: '' }] }
+  const is_complete = is_squad_complete(squad)
+
+  function handle_join_error(cause) {
+    console.error('Error al unirse al amistoso:', {
+      status: cause.status,
+      error_code: cause.error_code,
+      message: cause.message,
+      room_id: room.room_id,
+    })
+
+    const code = cause.error_code
+    const message = cause.message || 'Ocurrió un error inesperado.'
+
+    // El código de error es más fiable que clasificar solo por el texto.
+    if (code === 'UNAUTHORIZED' || cause.status === 401) {
+      set_notice({
+        kind: 'other',
+        title: 'Sesión vencida',
+        message: ERROR_MESSAGES.UNAUTHORIZED,
+      })
+      return
+    }
+
+    if (code === 'ROOM_NOT_FOUND' || cause.status === 404) {
+      set_notice({
+        kind: 'invalid_room',
+        title: 'No se encontró la sala',
+        message: ERROR_MESSAGES.ROOM_NOT_FOUND,
+      })
+      return
+    }
+
+    if (code === 'MATCH_ALREADY_STARTED') {
+      set_notice({
+        kind: 'full',
+        title: 'Partido ya iniciado',
+        message: ERROR_MESSAGES.MATCH_ALREADY_STARTED,
+      })
+      return
+    }
+
+    if (code === 'INVALID_SQUAD') {
+      set_notice({
+        kind: 'invalid_selection',
+        title: 'Selección no válida',
+        message: `${ERROR_MESSAGES.INVALID_SQUAD} Detalle: ${message}`,
+      })
+      return
+    }
+
+    // Compatibilidad con respuestas que aún no incluyen error_code.
+    if (
+      cause.status === 400 &&
+      /jugador|comportamiento|selecci[oó]n|squad/i.test(message)
+    ) {
+      set_notice({
+        kind: 'invalid_selection',
+        title: 'Selección no válida',
+        message: `${message} Revisá los seis puestos y sus comportamientos.`,
+      })
+      return
+    }
+
+    if (
+      cause.status === 400 &&
+      /completa|iniciad|started|full/i.test(message)
+    ) {
+      set_notice({
+        kind: 'full',
+        title: 'Sala no disponible',
+        message,
+      })
+      return
+    }
+
+    if (cause.status === 422) {
+      set_notice({
+        kind: 'other',
+        title: 'Datos no válidos',
+        message: `El servidor rechazó los datos enviados: ${message}`,
+      })
+      return
+    }
+
+    set_notice({
+      kind: 'other',
+      title: 'No se pudo unir al amistoso',
+      message: cause.status
+        ? `Error HTTP ${cause.status}: ${message}`
+        : 'No se pudo conectar con el servidor. Verificá tu conexión e intentá nuevamente.',
     })
   }
 
-  function remove_player(group, player_id) {
-    set_selection((current) => ({
-      ...current,
-      [group]: current[group].filter((entry) => entry.player_id !== player_id),
-    }))
-  }
-
-  function set_behavior(group, player_id, behavior_id) {
-    set_selection((current) => ({
-      ...current,
-      [group]: current[group].map((entry) => (entry.player_id === player_id ? { ...entry, behavior_id } : entry)),
-    }))
-  }
-
-  // --- Confirmar ---
-
-  // AVISO: el contrato usa 400 para "sala completa" y para "jugadores inválidos".
-  // Se distinguen por el texto del mensaje
-  function handle_join_error(cause) {
-    if (cause.status === 404) {
-      set_notice({ kind: 'invalid_room', title: 'La sala no existe', message: 'El ID o el código de la sala no son válidos. Podés ingresar otros.' })
-    } else if (cause.status === 400 && /completa|iniciad/i.test(cause.message)) {
-      set_notice({ kind: 'full', title: 'Sala completa', message: 'La sala ya está completa o el partido ya comenzó. No podés unirte.' })
-    } else if (cause.status === 400 && /jugador|comportamiento/i.test(cause.message)) {
-      set_notice({ kind: 'invalid_selection', title: 'Selección no válida', message: `${cause.message} Volvé a elegir tus jugadores.` })
-    } else if (cause.status === 422) {
-      set_notice({ kind: 'other', title: 'Datos no válidos', message: 'Los datos enviados no son válidos. Revisá la selección.' })
-    } else {
-      set_notice({ kind: 'other', title: 'No se pudo unir', message: cause.status ? cause.message : 'No se pudo conectar con el servidor. Intentá nuevamente.' })
-    }
-  }
-
   async function confirm() {
-    if (!is_complete || submitting) return
-    set_submitting(true)
-    try {
-      await join_friendly_room({
-        room_id: room.room_id,
-        code: room.code,
-        starters: selection.starters,
-        substitutes: selection.substitutes,
-      })
-      set_notice({ kind: 'success', title: '¡Te uniste al amistoso!', message: 'Te uniste correctamente. La sala está lista para iniciar el partido.' })
-    } catch (cause) {
-      if (cause.name !== 'AbortError') handle_join_error(cause)
-    } finally {
-      set_submitting(false)
+  if (!is_complete || submitting) return
+
+  set_submitting(true)
+
+  const payload = {
+    room_id: room.room_id,
+    code: room.code,
+    starters: squad.starters.map((slot) => ({
+      player_id: String(slot.playerId),
+      behavior_id: String(slot.behaviorId),
+    })),
+    substitutes: squad.substitutes.map((slot) => ({
+      player_id: String(slot.playerId),
+      behavior_id: String(slot.behaviorId),
+    })),
+  }
+
+  try {
+    console.debug('Enviando equipo para unirse al amistoso:', {
+      room_id: payload.room_id,
+      has_code: Boolean(payload.code),
+      starters: payload.starters,
+      substitutes: payload.substitutes,
+    })
+
+    // Si llegamos acá, el backend aceptó la incorporación.
+    await join_friendly_room(payload)
+
+    // IMPORTANTE:
+    // No volver al menú. Entramos directamente a la sala.
+    navigate(`/amistosos/${room.room_id}/sala`, {
+      replace: true,
+    })
+  } catch (cause) {
+    if (cause.name !== 'AbortError') {
+      handle_join_error(cause)
     }
+  } finally {
+    set_submitting(false)
+  }
   }
 
   function retry_selection() {
     set_notice(null)
-    set_selection(EMPTY_SELECTION)    // empieza la selección de nuevo
-    set_load_status('loading')        // muestra "cargando..." mientras recarga
-    set_attempt((current) => current + 1)    // y recarga los jugadores por si cambiaron
+    set_squad(EMPTY_SQUAD())
+    set_load_status('loading')
+    set_attempt((current) => current + 1)
   }
 
   function enter_other_code() {
@@ -177,11 +319,16 @@ export default function JoinFriendly() {
   }
 
   function change_room({ room_id, code }) {
-    set_room({ room_id, code })       // la selección se conserva
+    set_room({ room_id, code })
     set_change_open(false)
+    set_notice(null)
   }
 
-  // --- Pantalla ---
+  function retry_load() {
+    set_load_error('')
+    set_load_status('loading')
+    set_attempt((current) => current + 1)
+  }
 
   return (
     <div className="home-page">
@@ -189,106 +336,137 @@ export default function JoinFriendly() {
         <section className="home-welcome" aria-labelledby="join-title">
           <h1 id="join-title">Unirse a amistoso</h1>
           <p>Sala: {room.room_id}</p>
+
           <div className="join-row">
-            <button className="home-action" onClick={() => navigate('/home')}>Volver</button>
-            <button className="home-action" onClick={() => set_change_open(true)}>Cambiar sala</button>
+            <button
+              className="home-action"
+              onClick={() => navigate('/home')}
+            >
+              Volver
+            </button>
+
+            <button
+              className="home-action"
+              onClick={() => set_change_open(true)}
+            >
+              Cambiar sala
+            </button>
           </div>
         </section>
 
-        {load_status === 'loading' && <div className="home-notice" role="status">Cargando tus jugadores…</div>}
-        {load_status === 'error' && <>
-          <p className="home-notice home-error" role="alert">{load_error}</p>
-          <button
-          className="home-action"
-          onClick={() => { set_load_error(''); set_load_status('loading'); set_attempt(attempt + 1)}}
-          >
-            Reintentar
-          </button>
-        </>}
-
-        {load_status === 'ready' && <>
-          <div className="join-columns">
-            <section className="join-panel" aria-labelledby="join-available">
-              <h2 id="join-available">Tus jugadores ({available.length})</h2>
-              {players.length < TOTAL_COUNT && (
-                <p className="home-notice">Necesitás al menos {TOTAL_COUNT} jugadores creados para unirte a un amistoso.</p>
-              )}
-              <ul className="join-list">
-                {available.map((player) => (
-                  <li key={player.id} className="join-item">
-                    <span>{player.name}</span>
-                    <span className="join-item-actions">
-                      {GROUPS.map((group) => (
-                        <button
-                          key={group.key}
-                          className="home-action"
-                          onClick={() => add_player(group.key, player.id)}
-                          disabled={selection[group.key].length >= group.count}
-                        >
-                          {group.singular}
-                        </button>
-                      ))}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="join-panel" aria-labelledby="join-selected">
-              <h2 id="join-selected">Tu equipo ({total_selected}/{TOTAL_COUNT})</h2>
-              {GROUPS.map((group) => (
-                <div key={group.key}>
-                  <h3>{group.label} ({selection[group.key].length}/{group.count})</h3>
-                  <ul className="join-list">
-                    {selection[group.key].map((entry) => (
-                      <li key={entry.player_id} className="join-item">
-                        <span>{player_name(entry.player_id)}</span>
-                        <span className="join-item-actions">
-                          <select
-                            aria-label={`Comportamiento de ${player_name(entry.player_id)}`}
-                            value={entry.behavior_id}
-                            onChange={(event) => set_behavior(group.key, entry.player_id, event.target.value)}
-                          >
-                            <option value="">Elegí un comportamiento</option>
-                            {behaviors.map((behavior) => (
-                              <option key={behavior.id} value={behavior.id}>{behavior.name}</option>
-                            ))}
-                          </select>
-                          <button className="home-action" onClick={() => remove_player(group.key, entry.player_id)}>Quitar</button>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </section>
+        {load_status === 'loading' && (
+          <div className="home-notice" role="status">
+            Cargando tus jugadores y comportamientos…
           </div>
+        )}
 
-          <div className="join-row">
-            <button className="home-action" onClick={confirm} disabled={!is_complete || submitting}>
-              {submitting ? 'Uniéndote…' : 'Confirmar'}
+        {load_status === 'error' && (
+          <>
+            <p className="home-notice home-error" role="alert">
+              {load_error}
+            </p>
+
+            <button className="home-action" onClick={retry_load}>
+              Reintentar
             </button>
-            {!is_complete && (
-              <p className="join-hint" role="status">
-                {total_selected < TOTAL_COUNT
-                  ? `Faltan ${TOTAL_COUNT - total_selected} jugador(es) por elegir.`
-                  : `Asigná un comportamiento a ${without_behavior} jugador(es).`}
+          </>
+        )}
+
+        {load_status === 'ready' && (
+          <>
+            {players.length < 6 && (
+              <p className="home-notice" role="alert">
+                Tenés {players.length} jugadores. Necesitás al menos 6
+                jugadores distintos para completar titulares y suplentes.
               </p>
             )}
-          </div>
-        </>}
+
+            {behaviors.length === 0 && (
+              <p className="home-notice" role="alert">
+                No hay comportamientos disponibles. No vas a poder confirmar
+                hasta que el servidor devuelva al menos uno.
+              </p>
+            )}
+
+            <section className="join-panel" aria-labelledby="join-team-title">
+              <h2 id="join-team-title">Elegí tu equipo</h2>
+              <p>
+                Seleccioná 3 titulares y 3 suplentes. Cada puesto necesita un
+                jugador y un comportamiento. Un jugador no puede ocupar dos
+                puestos.
+              </p>
+
+              <SquadSelector
+                players={players}
+                behaviors={behaviors}
+                squad={squad}
+                setSquad={set_squad}
+              />
+            </section>
+
+            <div className="join-row">
+              <button
+                className="home-action"
+                onClick={confirm}
+                disabled={!is_complete || submitting}
+              >
+                {submitting ? 'Uniéndote…' : 'Confirmar y unirse'}
+              </button>
+
+              {!is_complete && (
+                <p className="join-hint" role="status">
+                  Completá los seis puestos con jugadores distintos y asignales
+                  un comportamiento.
+                </p>
+              )}
+            </div>
+          </>
+        )}
       </main>
 
       <NoticeDialog notice={notice}>
-        {notice?.kind === 'invalid_room' && <button className="home-action" onClick={enter_other_code}>Ingresar otro código</button>}
-        {notice?.kind === 'invalid_selection' && <button className="home-action" onClick={retry_selection}>Volver a seleccionar</button>}
-        {notice?.kind === 'other' && <button className="home-action" onClick={() => set_notice(null)}>Cerrar</button>}
+        {notice?.kind === 'invalid_room' && (
+          <button
+            className="home-action"
+            onClick={enter_other_code}
+          >
+            Ingresar otra sala
+          </button>
+        )}
+
+        {notice?.kind === 'invalid_selection' && (
+          <button
+            className="home-action"
+            onClick={retry_selection}
+          >
+            Volver a seleccionar
+          </button>
+        )}
+
+        {notice?.kind === 'other' && (
+          <button
+            className="home-action"
+            onClick={() => set_notice(null)}
+          >
+            Cerrar
+          </button>
+        )}
+
         {['success', 'full', 'invalid_room'].includes(notice?.kind) && (
-          <button className="home-action" onClick={() => navigate('/home')}>Volver al menú</button>
+          <button
+            className="home-action"
+            onClick={() => navigate('/home')}
+          >
+            Volver al menú
+          </button>
         )}
       </NoticeDialog>
 
-      <JoinFriendlyModal open={change_open} on_close={() => set_change_open(false)} on_submit={change_room} />
+      <JoinFriendlyModal
+        open={change_open}
+        on_close={() => set_change_open(false)}
+        on_submit={change_room}
+      />
     </div>
   )
 }

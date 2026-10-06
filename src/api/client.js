@@ -1,31 +1,37 @@
 import { clear_session, read_session } from '../auth/session'
 
-/*
- * Cliente HTTP del backend de FutBot.
-*/
+// Cliente HTTP del backend de FutBot.
+export const API_URL = (
+  import.meta.env.VITE_API_URL || 'http://localhost:8000'
+).replace(/\/$/, '')
 
-// Vite solo expone al navegador las variables que empiezan con VITE_
-export const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
-
-// Error de la API con el formato que define el contrato.
 export class ApiError extends Error {
   constructor(status, detail, error_code) {
-    super(detail)
+    const message = Array.isArray(detail)
+      ? detail
+          .map((item) => {
+            const field = Array.isArray(item.loc)
+              ? item.loc.join('.')
+              : 'campo'
+            return `${field}: ${item.msg ?? 'Dato inválido'}`
+          })
+          .join(' | ')
+      : typeof detail === 'string'
+        ? detail
+        : 'Error desconocido'
+
+    super(message)
+
     this.name = 'ApiError'
     this.status = status
+    this.detail = detail
     this.error_code = error_code
   }
 }
 
-/*
- * Hace una peticion a la API y devuelve el JSON de la respuesta
- * @param {string} path Ruta de la API, incluido el prefijo /api
- * @param {RequestInit} options Opciones de fetch (method, body, headers)
- */
 let signing_out = false
 
 function with_session_lock(operation) {
-  // Coordina el cierre de sesión entre pestañas.
   return navigator.locks
     ? navigator.locks.request('futbot.session', operation)
     : operation()
@@ -38,42 +44,82 @@ function expire_session(session) {
   }
 }
 
+// Lee la respuesta sin perder el estado HTTP si el backend no devuelve JSON.
 async function response_body(response) {
-  const body = response.status === 204 ? null : await response.json()
-  if (!response.ok) {
-    throw new ApiError(response.status, body?.detail ?? 'Error desconocido', body?.error_code)
+  let body = null
+
+  if (response.status !== 204) {
+    const text = await response.text()
+
+    if (text) {
+      try {
+        body = JSON.parse(text)
+      } catch {
+        body = { detail: text }
+      }
+    }
   }
+
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      body?.detail ?? `Error HTTP ${response.status}`,
+      body?.error_code
+    )
+  }
+
   return body
 }
 
 export async function request(path, options = {}) {
   const { authenticated = true, ...fetch_options } = options
   const session = authenticated ? read_session() : null
-  const send = () => {
-    const headers = new Headers(fetch_options.headers)
-    if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
-    if (session) headers.set('Authorization', `Bearer ${session.access_token}`)
-    return fetch(`${API_URL}${path}`, { ...fetch_options, headers })
+
+  const headers = new Headers(fetch_options.headers)
+
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
   }
-  const response = await send()
+
+  if (session) {
+    headers.set('Authorization', `Bearer ${session.access_token}`)
+  }
+
+  const response = await fetch(`${API_URL}${path}`, {
+    ...fetch_options,
+    headers,
+  })
+
   if (response.status === 401 && session && !signing_out) {
     expire_session(session)
   }
-  if (authenticated && signing_out) throw new DOMException('Sesión cerrándose', 'AbortError')
+
+  if (authenticated && signing_out) {
+    throw new DOMException('Sesión cerrándose', 'AbortError')
+  }
+
   return response_body(response)
 }
 
 export async function logout() {
   signing_out = true
+
   try {
     await with_session_lock(async () => {
       const session = read_session()
       if (!session) return
-      // Revoca la sesión compartida antes de borrar los datos locales.
+
       const response = await fetch(`${API_URL}/api/auth/logout`, {
-        method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` },
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       })
-      if (response.status !== 401) await response_body(response)
+
+      if (response.status !== 401) {
+        await response_body(response)
+      }
+
       expire_session(session)
     })
   } finally {
@@ -81,11 +127,10 @@ export async function logout() {
   }
 }
 
-// Consulta el estado del backend y de la base de datos.
 export function get_health() {
   return request('/api/health', { authenticated: false })
 }
-  //envia credenciales al endpoint
+
 export function login({ email, password }) {
   return request('/api/auth/login', {
     authenticated: false,
@@ -94,39 +139,48 @@ export function login({ email, password }) {
   })
 }
 
-
 export function get_current_user(options = {}) {
   return request('/api/auth/me', options)
 }
 
-
-// AJUSTAR: rutas y forma de la respuesta de los listados
+// Admite respuestas como [...] o { players: [...] }.
 function as_list(body, key) {
-  return Array.isArray(body) ? body : (body?.[key] ?? [])    // acepta [...] o { players: [...] }
+  if (Array.isArray(body)) return body
+  return Array.isArray(body?.[key]) ? body[key] : []
 }
 
-// Jugadores creados por el club autenticado
 export async function list_players(options = {}) {
   const body = await request('/api/players', options)
   return as_list(body, 'players')
 }
 
-// Comportamientos disponibles (del club y preprogramados)
 export async function list_behaviors(options = {}) {
-  const body = await request('/api/behaviors/preprogrammed', options)     // temporal, dado que solo hay preprogramados por ahora
+  const body = await request('/api/behaviors', options)
   return as_list(body, 'behaviors')
 }
 
-// Une al club autenticado a un amistoso. Internamente usamos snake_case;
-// el contrato pide titulares, suplentes, playerId y behaviorId, y se convierten acá.
-export function join_friendly_room({ room_id, code, starters, substitutes }) {
-  const to_payload = ({ player_id, behavior_id }) => ({ playerId: player_id, behaviorId: behavior_id })
-  return request(`/api/friendly/rooms/${encodeURIComponent(room_id)}/join`, {
-    method: 'POST',
-    body: JSON.stringify({
-      code,
-      titulares: starters.map(to_payload),
-      suplentes: substitutes.map(to_payload),
-    }),
+// Convierte el equipo del frontend al formato usado por el endpoint /join.
+// Conservamos el contrato actual: titulares, suplentes, playerId y behaviorId.
+export function join_friendly_room({
+  room_id,
+  code,
+  starters,
+  substitutes,
+}) {
+  const to_payload = ({ player_id, behavior_id }) => ({
+    playerId: String(player_id),
+    behaviorId: String(behavior_id),
   })
+
+  return request(
+    `/api/friendly/rooms/${encodeURIComponent(room_id)}/join`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        code,
+        titulares: starters.map(to_payload),
+        suplentes: substitutes.map(to_payload),
+      }),
+    }
+  )
 }
