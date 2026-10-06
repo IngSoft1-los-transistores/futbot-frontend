@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import React, { useState , useEffect } from "react"
+import { useState , useEffect } from "react"
 import { createFriendlyRoom , getMyPlayers , getMyBehaviors } from "../api/friendly"
 import SquadSelector from './SquadSelector'
 import './CreateFriendlyModal.css'
@@ -19,13 +19,19 @@ export default function CreateFriendlyModal({ isOpen, onClose }) {
     const [createdRoom, setCreatedRoom] = useState(null)
 
     useEffect(() => {
+        if (!isOpen) return
+        let active = true
         Promise.all([getMyPlayers(), getMyBehaviors()])
             .then(([playersData, behaviorsData]) => {
+                if (!active) return
                 setPlayers(playersData)
                 setBehaviors(behaviorsData)
             })
-            .catch(() => setError('Error al cargar la pantalla de jugadores y estrategias.'))
-    }, [])
+            .catch(() => {
+                if (active) setError('Error al cargar la pantalla de jugadores y estrategias.')
+            })
+        return () => { active = false }
+    }, [isOpen])
 
     const isSquadComplete = () => {
         const isSlotValid = (slot) => slot.playerId !== '' && slot.behaviorId !== ''
@@ -65,6 +71,8 @@ export default function CreateFriendlyModal({ isOpen, onClose }) {
             setLoading(false)
         }
     }
+
+    if (!isOpen) return null
 
     return (
     <div className="modal-overlay" onClick={onClose}>
