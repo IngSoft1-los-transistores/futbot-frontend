@@ -8,19 +8,9 @@ import {
 import { read_session } from '../auth/session'
 import JoinFriendlyModal from '../components/join_friendly_modal'
 import SquadSelector from '../components/SquadSelector'
+import { empty_squad, is_squad_complete } from '../components/squad'
 import './Home.css'
 import './join_friendly.css'
-
-const EMPTY_SQUAD = () => ({
-  starters: Array.from({ length: 3 }, () => ({
-    playerId: '',
-    behaviorId: '',
-  })),
-  substitutes: Array.from({ length: 3 }, () => ({
-    playerId: '',
-    behaviorId: '',
-  })),
-})
 
 const ERROR_MESSAGES = {
   UNAUTHORIZED: 'Tu sesión no es válida o venció. Iniciá sesión nuevamente.',
@@ -82,7 +72,7 @@ export default function JoinFriendly() {
 
   const [players, set_players] = useState([])
   const [behaviors, set_behaviors] = useState([])
-  const [squad, set_squad] = useState(EMPTY_SQUAD)
+  const [squad, set_squad] = useState(empty_squad)
   const [load_status, set_load_status] = useState('loading')
   const [load_error, set_load_error] = useState('')
   const [attempt, set_attempt] = useState(0)
@@ -153,22 +143,6 @@ export default function JoinFriendly() {
   }, [attempt, has_room])
 
   if (!room) return null
-
-  const is_squad_complete = (team) => {
-    const all_slots = [...team.starters, ...team.substitutes]
-
-    return (
-      all_slots.length === 6 &&
-      all_slots.every(
-        (slot) =>
-          slot.playerId !== '' &&
-          slot.playerId != null &&
-          slot.behaviorId !== '' &&
-          slot.behaviorId != null
-      ) &&
-      new Set(all_slots.map((slot) => String(slot.playerId))).size === 6
-    )
-  }
 
   const is_complete = is_squad_complete(squad)
 
@@ -308,7 +282,7 @@ export default function JoinFriendly() {
 
   function retry_selection() {
     set_notice(null)
-    set_squad(EMPTY_SQUAD())
+    set_squad(empty_squad())
     set_load_status('loading')
     set_attempt((current) => current + 1)
   }
