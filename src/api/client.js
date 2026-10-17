@@ -184,3 +184,24 @@ export function join_friendly_room({
     }
   )
 }
+
+// Deja de cada liga solo lo que usa la pantalla
+function normalize_league(raw) {
+  return {
+    id: raw.id,
+    name: raw.name,
+    participants_count: raw.participantsCount ?? raw.participants_count ?? 0,     //actualizar cuando haya un crear_liga
+    started: Boolean(raw.started),
+    is_private: Boolean(raw.isPrivate ?? raw.is_private),                         //actualizar cuando la estructura este definida
+  }
+}
+
+// Ligas registradas. Con `name` el backend devuelve solo las que coinciden.
+export async function list_leagues({ name = '', signal } = {}) {
+  const params = new URLSearchParams()
+  const clean_name = name.trim()
+  if (clean_name) params.set('name', clean_name)
+  const query = params.toString()
+  const body = await request(`/api/leagues${query ? `?${query}` : ''}`, { signal })
+  return as_list(body, 'leagues').map(normalize_league)
+}
