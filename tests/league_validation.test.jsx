@@ -146,6 +146,31 @@ describe("validate_league", () => {
         errorsWith({ is_private: true, password: undefined }).password
       ).toBeDefined();
     });
+    it("acepta una contraseña de exactamente 72 bytes", () => {
+      expect(
+        errorsWith({ is_private: true, password: "a".repeat(72) }).password
+      ).toBeUndefined();
+    });
+
+    it("rechaza una contraseña de 73 bytes", () => {
+      expect(
+        errorsWith({ is_private: true, password: "a".repeat(73) }).password
+      ).toBeDefined();
+    });
+
+    it("rechaza una contraseña con 37 caracteres que ocupan 74 bytes", () => {
+      // "ñ" ocupa 2 bytes en UTF-8: 37 caracteres = 74 bytes
+      expect(
+        errorsWith({ is_private: true, password: "ñ".repeat(37) }).password
+      ).toBeDefined();
+    });
+
+    it("acepta una contraseña con 36 caracteres que ocupan 72 bytes", () => {
+      expect(
+        errorsWith({ is_private: true, password: "ñ".repeat(36) }).password
+      ).toBeUndefined();
+    });
+
   });
 
 });
