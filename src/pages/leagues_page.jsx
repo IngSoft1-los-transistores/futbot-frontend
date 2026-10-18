@@ -42,6 +42,12 @@ export default function LeaguesPage() {
       .then((loaded) => {
         if (controller.signal.aborted) return
         set_leagues(loaded)
+        set_selected((current) => {
+          if (!current) return current
+          const updated = loaded.find((league) => league.id === current.id)
+          if (updated) return updated
+          return query ? current : null   //filtro, sigue existiendo aunque no aparezca
+        })
         set_error('')
         set_status('ready')
       })
@@ -82,6 +88,7 @@ export default function LeaguesPage() {
           <p>Buscá una liga por nombre y seleccioná aquella en la que querés participar.</p>
           <div className="leagues-row">
             <button className="home-action" onClick={() => navigate('/home')}>Volver</button>
+            <button className="home-action" onClick={reload} disabled={status === 'loading'}>Actualizar</button>
           </div>
         </section>
 
@@ -107,7 +114,10 @@ export default function LeaguesPage() {
         {selected && (
           <section className="leagues-selection" aria-labelledby="leagues-selected-title">
             <h2 id="leagues-selected-title">Liga seleccionada: {selected.name}</h2>
-            <p>{participants_label(selected.participants_count)} · {selected.started ? 'Iniciada' : 'Sin iniciar'}</p>
+            <p>
+              {participants_label(selected.participants_count)} · {selected.started ? 'Iniciada' : 'Sin iniciar'}
+              {selected.is_private ? ' · Privada' : ''}
+              </p>
             {/* TICKET "UNIRSE A LIGA": el botón para continuar va acá, usando `selected` */}
             <button className="home-action" onClick={() => set_selected(null)}>Quitar selección</button>
           </section>
@@ -143,6 +153,7 @@ export default function LeaguesPage() {
                     <span className={`leagues-chip ${league.started ? 'leagues-chip--started' : 'leagues-chip--open'}`}>
                       {league.started ? 'Iniciada' : 'Sin iniciar'}
                     </span>
+                    {league.is_private && <span className="leagues-chip leagues-chip--private">Privada</span>}
                   </p>
                   <button
                     className="home-action"

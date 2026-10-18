@@ -10,6 +10,8 @@ const leagues = [
   { id: 'league-centro', name: 'Liga del Centro', participantsCount: 0, started: false, isPrivate: false },
 ]
 
+const private_league = { id: 'league-secreta', name: 'Liga Secreta', participantsCount: 5, started: false, isPrivate: true }
+
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/auth/logout', (route) => route.fulfill({ status: 204 }))
   await page.route('**/api/auth/me', (route) => route.fulfill({ json: { user_id: 'test-user', club_id: session.club_id } }))
@@ -52,6 +54,12 @@ const league_card = (page, name) =>
 async function search_for(page, text) {
   await page.getByLabel('Buscar por nombre').fill(text)
   await page.getByRole('button', { name: 'Buscar', exact: true }).click()
+}
+
+async function refresh(page) {
+  const request = page.waitForRequest(LEAGUES_URL)
+  await page.getByRole('button', { name: 'Actualizar', exact: true}).click()
+  return request
 }
 
 // --- Acceso ---
@@ -238,4 +246,120 @@ test('una sesión vencida (401) borra la sesión y lleva al login', async ({ pag
   await page.goto('/leagues')
   await expect(page).toHaveURL('/login')
   expect(await stored_session(page)).toBeNull()
+})
+
+// --- Actualizar ---
+
+test('Actualizar vuelve a consultar el listado con el token y muestra los cambios', async ({ page }) => {
+  let current = leagues
+  await page.route(LEAGUES_URL, (route) => route.fulfill({ json: current }))
+  await open_leagues(page)
+  await expect(page.getByRole('listitem')).toHaveCount(3)
+  current = [...leagues, { id: 'league-nueva', name: 'Liga Nueva', participantsCount: 0, started: false, isPrivate: false }]
+  const request = await refresh(page)
+  expect(request.method()).toBe('GET')
+  expect(request.headers().authorization).toBe(`Bearer ${session.access_token}`)
+  await expect(league_card(page, 'Liga Nueva')).toBeVisible()
+  await expect(page.getByRole('listitem')).toHaveCount(4)
+})
+
+test('Actualizar conserva la búsqueda aplicada y lo que se escribió sin buscar', async ({ page }) => {
+  await mock_leagues(page)
+  await open_leagues(page)
+  await search_for(page, 'sur')
+  await expect(page.getByRole('listitem')).toHaveCount(1)
+  await page.getByLabel('Buscar por nombre').fill('liga')    // escrito, pero sin buscar
+  const request = await refresh(page)
+  expect(new URL(request.url()).search).toBe('?name=sur')
+  await expect(page.getByLabel('Buscar por nombre')).toHaveValue('liga')
+  await expect(page.getByRole('listitem')).toHaveCount(1)
+})
+
+test('Actualizar queda deshabilitado mientras consulta', async ({ page }) => {
+  let hold = false
+  let release
+  const gate = new Promise((resolve) => { release = resolve })
+  await page.route(LEAGUES_URL, async (route) => {
+    if (hold) await gate
+    await route.fulfill({ json: leagues })
+  })
+  await open_leagues(page)
+  await expect(league_card(page, 'Liga Norte')).toBeVisible()
+  hold = true
+  await page.getByRole('button', { name: 'Actualizar', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Actualizar', exact: true })).toBeDisabled()
+  release()
+  await expect(page.getByRole('button', { name: 'Actualizar', exact: true })).toBeEnabled()
+})
+
+test('Actualizar refresca los datos de la liga seleccionada', async ({ page }) => {
+  let current = leagues
+  await page.route(LEAGUES_URL, (route) => route.fulfill({ json: current }))
+  await open_leagues(page)
+  await league_card(page, 'Liga Norte').getByRole('button', { name: 'Seleccionar', exact: true }).click()
+  current = leagues.map((league) => (league.id === 'league-norte' ? { ...league, participantsCount: 13 } : league))
+  await refresh(page)
+  const panel = page.getByRole('region', { name: 'Liga seleccionada: Liga Norte' })
+  await expect(panel).toContainText('13 participantes')
+})
+
+test('si la liga seleccionada desaparece al actualizar, se descarta la selección', async ({ page }) => {
+  let current = leagues
+  await page.route(LEAGUES_URL, (route) => route.fulfill({ json: current }))
+  await open_leagues(page)
+  await league_card(page, 'Liga Norte').getByRole('button', { name: 'Seleccionar', exact: true }).click()
+  current = leagues.filter((league) => league.id !== 'league-norte')
+  await refresh(page)
+  await expect(page.getByRole('listitem')).toHaveCount(2)
+  await expect(page.getByRole('heading', { name: /Liga seleccionada/ })).toHaveCount(0)
+})
+
+test('un error al actualizar se informa y permite reintentar', async ({ page }) => {
+  let failing = false
+  await page.route(LEAGUES_URL, (route) => (
+    failing
+      ? route.fulfill({ status: 500, json: { detail: 'Servidor caído', error_code: 'INTERNAL_SERVER_ERROR' } })
+      : route.fulfill({ json: leagues })
+  ))
+  await open_leagues(page)
+  await expect(league_card(page, 'Liga Norte')).toBeVisible()
+  failing = true
+  await refresh(page)
+  await expect(page.getByRole('alert')).toContainText('Servidor caído')
+  failing = false
+  await page.getByRole('button', { name: 'Reintentar', exact: true }).click()
+  await expect(league_card(page, 'Liga Norte')).toBeVisible()
+})
+
+// --- Ligas privadas ---
+
+test('las ligas privadas se muestran indicando que lo son', async ({ page }) => {
+  await mock_leagues(page, [...leagues, private_league])
+  await open_leagues(page)
+  await expect(page.getByRole('listitem')).toHaveCount(4)
+  await expect(league_card(page, 'Liga Secreta').getByText('Privada', { exact: true })).toBeVisible()
+  await expect(league_card(page, 'Liga Norte').getByText('Privada', { exact: true })).toHaveCount(0)
+})
+
+test('una liga privada se puede seleccionar sin pedir el código en esta pantalla', async ({ page }) => {
+  await mock_leagues(page, [...leagues, private_league])
+  await open_leagues(page)
+  await league_card(page, 'Liga Secreta').getByRole('button', { name: 'Seleccionar', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Liga seleccionada: Liga Secreta' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Liga seleccionada: Liga Secreta' })).toContainText('Privada')
+  await expect(page).toHaveURL('/leagues')
+})
+
+// --- Búsqueda con tildes y ñ ---
+
+test('la búsqueda con tildes y ñ se envía sin alterar', async ({ page }) => {
+  const names = []
+  await page.route(LEAGUES_URL, async (route) => {
+    names.push(new URL(route.request().url()).searchParams.get('name'))
+    await route.fulfill({ json: [] })
+  })
+  await open_leagues(page)
+  await search_for(page, 'Ñandú')
+  await expect(page.getByText('No hay ligas que coincidan con "Ñandú".')).toBeVisible()
+  expect(names[names.length - 1]).toBe('Ñandú')
 })
