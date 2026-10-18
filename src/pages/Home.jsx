@@ -5,6 +5,7 @@ import { clear_session, read_session, save_session } from '../auth/session'
 import CreateFriendlyModal from '../components/CreateFriendlyModal'
 import Modal from '../components/modal';
 import CreatePlayerForm from '../components/create_player_form';
+import CreateLeagueForm from '../components/create_league_form';
 
 import './Home.css'
 import JoinFriendlyModal from '../components/join_friendly_modal'
@@ -19,6 +20,7 @@ export default function Home() {
   const [create_open, set_create_open] = useState(false)
   const [show_form, setShow_form] = useState(false);
   const [show_success, setShow_success] = useState(false);
+  const [show_league_form, setShow_league_form] = useState(false);
 
   // Al crear el jugador se cierra el formulario y se muestra el pop-up de éxito
   const handle_success = () => {
@@ -209,16 +211,16 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
-              {/* Botones de acción: crear y unirse */}
-              <div className="home-card-actions">
-                <button className="home-action" onClick={() => set_create_open(true)}>
-                  CREAR
-                </button>
-                <button className="home-action" onClick={() => set_join_open(true)}>
-                  Unirse a un amistoso
-                </button>
-              </div>
-            </article>
+                {/* Botones de acción: crear y unirse */}
+                <div className="home-card-actions">
+                  <button className="home-action" onClick={() => set_create_open(true)}>
+                    CREAR
+                  </button>
+                  <button className="home-action" onClick={() => set_join_open(true)}>
+                    Unirse a un amistoso
+                  </button>
+                </div>
+              </article>
 
               {/* Tarjeta crear jugador */}
               <article className="home-card" aria-labelledby="home-card-player">
@@ -253,7 +255,6 @@ export default function Home() {
               </article>
 
             </div>
-
             {show_form && (
               <Modal
                 title="Crear Jugador"
@@ -284,6 +285,32 @@ export default function Home() {
                 </div>
               </Modal>
             )}
+            {/* Tarjeta crear liga */}
+            <article className="home-card" aria-labelledby="home-card-league">
+              <div className="home-card-content">
+                <div>
+                  <h2 id="home-card-league">Crear liga</h2>
+                  <p>Configurá una liga, elegí tu plantel y compartí el código.</p>
+                </div>
+              </div>
+              <button
+                className="home-action"
+                type="button"
+                onClick={() => setShow_league_form(true)}
+              >
+                CREAR LIGA
+              </button>
+            </article>
+            {show_league_form && (
+              <Modal
+                title="Crear Liga"
+                description="Configurá la liga y elegí 3 titulares y 3 suplentes con su comportamiento."
+                onClose={() => setShow_league_form(false)}
+              >
+                <CreateLeagueForm onCancel={() => setShow_league_form(false)} />
+              </Modal>
+            )}
+
           </>
         )}
       </main>
