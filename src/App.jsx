@@ -9,6 +9,7 @@ import FriendlyRoomPage from './pages/friendly_room_page'
 import './styles/tokens.css'
 import './App.css'
 import JoinFriendly from './pages/join_friendly'
+import LeagueWaitingRoom from './pages/league_waiting_room'
 
 
 const Navbar = () => (
@@ -82,6 +83,7 @@ export default function App() {
         <Route path="/friendly/join" element={<JoinFriendly />} />
         <Route path="/amistosos/:room_id/sala" element={<DashboardLayout><FriendlyRoomPage /></DashboardLayout>} />
         <Route path="/partidos/:match_id" element={<Match />} />
+        <Route path="/league/:league_id/waiting" element={<LeagueWaitingRoom />}/>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
