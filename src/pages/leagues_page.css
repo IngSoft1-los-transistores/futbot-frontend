@@ -102,9 +102,6 @@
 
 .leagues-item .home-action {
   align-self: flex-start;
-}
-
-.home-action[aria-pressed='true'] {
   background: #d4aa5d;
 }
 

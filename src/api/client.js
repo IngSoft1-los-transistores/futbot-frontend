@@ -190,9 +190,9 @@ function normalize_league(raw) {
   return {
     id: raw.id,
     name: raw.name,
-    participants_count: raw.participantsCount ?? raw.participants_count ?? 0,     //actualizar cuando haya un crear_liga
+    participants_count: raw.participantsCount ?? raw.participants_count ?? 0,
     started: Boolean(raw.started),
-    is_private: Boolean(raw.isPrivate ?? raw.is_private),                         //actualizar cuando la estructura este definida
+    is_private: Boolean(raw.isPrivate ?? raw.is_private),
   }
 }
 
