@@ -67,6 +67,20 @@ describe('join_league', () => {
         { playerId: '6', behaviorId: '20' },
       ],
     })
+    expect(JSON.parse(options.body)).not.toHaveProperty('password')
+  })
+
+  it('adds the password for a private league', () => {
+    const slot = { playerId: 'p', behaviorId: 'b' }
+
+    join_league('league-1', {
+      starters: [slot, slot, slot],
+      substitutes: [slot, slot, slot],
+      password: 'secreta',
+    })
+
+    const [, options] = request.mock.calls[0]
+    expect(JSON.parse(options.body).password).toBe('secreta')
   })
 })
 

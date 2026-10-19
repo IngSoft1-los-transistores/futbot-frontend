@@ -138,6 +138,37 @@ test('joining sends the POST with the token and the squad, then locks it', async
   await expect(confirm_button(page)).toHaveCount(0)
 })
 
+test('a private league asks for its password and lets the user fix a wrong one', async ({ page }) => {
+  await mock_detail(page, detail({ isPrivate: true }))
+  const passwords = []
+  await page.route('**/api/leagues/*/join', async (route) => {
+    const { password } = route.request().postDataJSON()
+    passwords.push(password)
+    await route.fulfill(
+      password === 'secreta'
+        ? { json: { enrollmentId: 'enrollment-1', clubId: session.club_id, leagueId: LEAGUE_ID } }
+        : { status: 400, json: { detail: 'La contraseña de la liga es incorrecta', error_code: 'WRONG_LEAGUE_PASSWORD' } }
+    )
+  })
+  await open_join_page(page)
+
+  await fill_team(page)
+  await expect(confirm_button(page)).toBeDisabled()
+  const password_field = page.getByLabel('Contraseña de la liga')
+  await password_field.fill('otra')
+  await confirm_button(page).click()
+
+  const notice = page.getByRole('dialog', { name: 'Contraseña incorrecta' })
+  await notice.getByRole('button', { name: 'Corregir contraseña' }).click()
+  await expect(password_field).toBeFocused()
+
+  await password_field.fill('secreta')
+  await confirm_button(page).click()
+
+  await expect(page.getByRole('dialog', { name: '¡Te uniste a la liga!' })).toBeVisible()
+  expect(passwords).toEqual(['otra', 'secreta'])
+})
+
 test('a full league is reported without offering the squad selector', async ({ page }) => {
   await mock_detail(page, detail({ enrolledClubs: 8 }))
   await open_join_page(page)

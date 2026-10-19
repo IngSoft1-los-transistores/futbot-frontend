@@ -197,7 +197,6 @@ describe('leagues that cannot be joined', () => {
   it.each([
     ['already started', { status: 'inProgress' }, 'La liga ya no admite inscripciones.'],
     ['full', { enrolledClubs: 8 }, 'La liga está completa: ya no es posible unirse.'],
-    ['private', { isPrivate: true }, 'Esta liga es privada: para unirte necesitás su contraseña.'],
   ])('a %s league shows the reason and no squad selector', async (_, overrides, message) => {
     get_league.mockResolvedValue(league(overrides))
     await mount()
@@ -225,6 +224,70 @@ describe('leagues that cannot be joined', () => {
     expect(within(squad).getByText('Defensa')).toBeInTheDocument()
     expect(screen.queryAllByRole('combobox')).toHaveLength(0)
     expect(screen.queryByRole('button', { name: 'Confirmar inscripción' })).not.toBeInTheDocument()
+  })
+})
+
+describe('private leagues', () => {
+  beforeEach(() => {
+    get_league.mockResolvedValue(league({ isPrivate: true }))
+  })
+
+  it('a public league does not ask for a password', async () => {
+    get_league.mockResolvedValue(league())
+    await mount()
+
+    expect(screen.queryByLabelText('Contraseña de la liga')).not.toBeInTheDocument()
+  })
+
+  it('asks for the password and keeps confirm disabled until it is filled', async () => {
+    const user = await mount()
+
+    expect(screen.getByLabelText('Contraseña de la liga')).toHaveAccessibleDescription(
+      'Es una liga privada: pedile la contraseña a quien la creó.'
+    )
+    expect(screen.queryAllByRole('combobox')).toHaveLength(12)
+
+    await fill_squad(user)
+    expect(confirm_button()).toBeDisabled()
+    expect(screen.getByText('Ingresá la contraseña de la liga.')).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Contraseña de la liga'), 'secreta')
+    expect(confirm_button()).toBeEnabled()
+  })
+
+  it('sends the trimmed password together with the squad', async () => {
+    join_league.mockResolvedValue({ enrollmentId: 'e-1', clubId: 'club', leagueId: LEAGUE_ID })
+    const user = await mount()
+
+    await fill_squad(user)
+    await user.type(screen.getByLabelText('Contraseña de la liga'), ' secreta ')
+    await user.click(confirm_button())
+
+    expect(join_league).toHaveBeenCalledWith(LEAGUE_ID, {
+      starters: [chosen(0), chosen(1), chosen(2)],
+      substitutes: [chosen(3), chosen(4), chosen(5)],
+      password: 'secreta',
+    })
+    expect(await screen.findByRole('dialog', { name: '¡Te uniste a la liga!' })).toBeInTheDocument()
+  })
+
+  it('a wrong password keeps the squad and puts the cursor back on the field', async () => {
+    join_league.mockRejectedValue(api_error(400, 'WRONG_LEAGUE_PASSWORD'))
+    const user = await mount()
+
+    await fill_squad(user)
+    await user.type(screen.getByLabelText('Contraseña de la liga'), 'incorrecta')
+    await user.click(confirm_button())
+
+    const dialog = await screen.findByRole('dialog', { name: 'Contraseña incorrecta' })
+    expect(within(dialog).getByText('La contraseña no es correcta. Revisala y volvé a confirmar.')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Corregir contraseña' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Contraseña de la liga')).toHaveFocus()
+    expect(screen.getByLabelText('Contraseña de la liga')).toHaveValue('incorrecta')
+    expect(screen.getAllByRole('combobox')[0]).toHaveValue('player-1')
+    expect(confirm_button()).toBeEnabled()
   })
 })
 
