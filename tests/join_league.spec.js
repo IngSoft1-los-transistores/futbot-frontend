@@ -107,6 +107,32 @@ async function fill_team(page) {
 
 const confirm_button = (page) => page.getByRole('button', { name: 'Confirmar inscripción' })
 
+test('the league list leads to the join page of the selected league', async ({ page }) => {
+  // Same shape as GET /api/leagues (ListLeagueResponse).
+  await page.route('**/api/leagues', (route) =>
+    route.fulfill({
+      json: [
+        { id: 'otra-liga', name: 'Copa Sur', participantsCount: 2, started: false, isPrivate: false },
+        { id: LEAGUE_ID, name: 'Liga del Barrio', participantsCount: 5, started: false, isPrivate: false },
+      ],
+    })
+  )
+  await mock_detail(page, detail())
+  await seed_session(page)
+  await page.goto('/leagues')
+
+  await page
+    .getByRole('listitem')
+    .filter({ hasText: 'Liga del Barrio' })
+    .getByRole('button', { name: 'Seleccionar', exact: true })
+    .click()
+  await page.getByRole('button', { name: 'Unirse a Liga', exact: true }).click()
+
+  await expect(page).toHaveURL(JOIN_URL)
+  await expect(page.getByRole('heading', { name: 'Unirse a liga', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Liga del Barrio' })).toBeVisible()
+})
+
 test('joining sends the POST with the token and the squad, then locks it', async ({ page }) => {
   await mock_detail(page, detail())
   const requests = await mock_join(page, 200, {

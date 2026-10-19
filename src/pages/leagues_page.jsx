@@ -118,7 +118,7 @@ export default function LeaguesPage() {
               {participants_label(selected.participants_count)} · {selected.started ? 'Iniciada' : 'Sin iniciar'}
               {selected.is_private ? ' · Privada' : ''}
               </p>
-            {/* TICKET "UNIRSE A LIGA": el botón para continuar va acá, usando `selected` */}
+            <button className="home-action" onClick={() => navigate(`/ligas/${encodeURIComponent(selected.id)}/unirse`)}>Unirse a Liga</button>
             <button className="home-action" onClick={() => set_selected(null)}>Quitar selección</button>
           </section>
         )}
