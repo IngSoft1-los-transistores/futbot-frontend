@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getMyPlayers, getMyBehaviors } from '../api/friendly';
 import { validate_league } from './league_validation';
 import SquadSelector from './SquadSelector';
@@ -60,6 +61,7 @@ function get_error_message(err) {
 
 // Componente de formulario para crear una liga
 export default function CreateLeagueForm({ onCancel }) {
+  const navigate = useNavigate()
   const [form, setForm] = useState(INITIAL_FORM);
   const [squad, setSquad] = useState(INITIAL_SQUAD);
   const [players, setPlayers] = useState([]);
@@ -165,6 +167,14 @@ export default function CreateLeagueForm({ onCancel }) {
             {copied ? 'Copiado' : 'Copiar'}
           </button>
         </div>
+        <button
+          type="button"
+          onClick={() => navigate(`/league/${created_league.id}/waiting`)}
+          className={`${button_class} bg-[#C9973B] text-[#1A1A1A]`}
+        >
+          Ir al Lobby
+        </button>
+          
         <button
           type="button"
           onClick={onCancel}
