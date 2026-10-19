@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import CreateLeagueForm from "../src/components/create_league_form";
 import { getMyPlayers, getMyBehaviors } from "../src/api/friendly";
 import { createLeague } from "../src/api/leagues";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../src/api/friendly", () => ({
   getMyPlayers: vi.fn(),
@@ -48,7 +49,11 @@ describe("CreateLeagueForm", () => {
 
   it("deshabilita el botón con el plantel incompleto y lo habilita al completarlo", async () => {
     const user = userEvent.setup();
-    render(<CreateLeagueForm onCancel={vi.fn()} />);
+    render(
+      <MemoryRouter>
+        <CreateLeagueForm onCancel={vi.fn()}/>
+      </MemoryRouter>
+    );
 
     expect(submit_button().disabled).toBe(true);
 
@@ -59,7 +64,11 @@ describe("CreateLeagueForm", () => {
 
   it("muestra el campo contraseña solo si la liga es privada", async () => {
     const user = userEvent.setup();
-    render(<CreateLeagueForm onCancel={vi.fn()} />);
+    render(
+      <MemoryRouter>
+        <CreateLeagueForm onCancel={vi.fn()} />
+      </MemoryRouter>  
+    );
 
     expect(screen.queryByLabelText("Contraseña")).toBeNull();
 
@@ -70,7 +79,11 @@ describe("CreateLeagueForm", () => {
 
   it("no llama a createLeague y muestra errores si los campos son inválidos", async () => {
     const user = userEvent.setup();
-    render(<CreateLeagueForm onCancel={vi.fn()} />);
+    render(
+      <MemoryRouter>
+        <CreateLeagueForm onCancel={vi.fn()} />
+      </MemoryRouter>
+    );
 
     await fill_squad(user);
     await user.click(submit_button());
@@ -81,7 +94,11 @@ describe("CreateLeagueForm", () => {
 
   it("envía la liga y muestra el código al recibir 201", async () => {
     const user = userEvent.setup();
-    render(<CreateLeagueForm onCancel={vi.fn()} />);
+    render(
+      <MemoryRouter>
+        <CreateLeagueForm onCancel={vi.fn()} />
+      </MemoryRouter>
+    );
 
     await fill_fields(user);
     await fill_squad(user);
@@ -102,7 +119,11 @@ describe("CreateLeagueForm", () => {
   it("muestra el error del backend y no muestra el éxito", async () => {
     createLeague.mockRejectedValue({ detail: "Ya existe una liga con ese nombre" });
     const user = userEvent.setup();
-    render(<CreateLeagueForm onCancel={vi.fn()} />);
+    render(
+      <MemoryRouter>
+        <CreateLeagueForm onCancel={vi.fn()} />
+      </MemoryRouter>
+    );
 
     await fill_fields(user);
     await fill_squad(user);

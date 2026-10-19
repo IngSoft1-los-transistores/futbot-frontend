@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 
 export function use_league_waiting_socket(league_id, club_id){
-    const [room_info, setRoom_info] = useState(null);
-    const [error, setError] = useState(null);
-    const [redirect_url, setRedirect_url] = useState(null);
+    const [room_info, set_room_info] = useState(null);
+    const [error, set_error] = useState(null);
+    const [redirect_url, set_redirect_url] = useState(null);
     const socket_ref = useRef(null);
 
     useEffect(() =>{
         if (!league_id || !club_id) return;
 
         const ws_protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const ws_host = import.meta.env.VITE_ES_URL || window.location.host;
+        
+        const raw_host = import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || window.location.hostname + ':8000';
+        const ws_host = raw_host.replace(/^(w{1,2}s|https?):\/\//i, '').replace(/\/+$/, '');
+
         const ws_url = `${ws_protocol}//${ws_host}/ws/league/${league_id}/waiting?club_id=${club_id}`;
         
         const ws = new WebSocket(ws_url);
@@ -19,22 +22,42 @@ export function use_league_waiting_socket(league_id, club_id){
         ws.onmessage = (event) => {
             try{
                 const data = JSON.parse(event.data);
+                console.log("WebSocket recibido:", data);
 
-                if(data.type === 'room.info' || data.type === 'club_joined_waiting' || data.type === 'club_left_waiting') {
-                    setRoom_info((prev) => {
-                        if (data.type === 'room_info') return data;
+                if(data.type === 'room_info') {
+                    set_room_info(data);
+                } else if (data.type === 'club_joined_waiting') {
+                    set_room_info((prev) => {
+                        if (!prev) return prev;
+                        const inscribed = prev.inscribed_clubs || [];
+                        const updated_clubs = inscribed.includes(data.club_id)
+                            ? inscribed
+                            : [...inscribed, data.club_id];
+                        
                         return {
                             ...prev,
-                            current_participants: data.current_participants ?? prev?.current_participants,
-                            can_start: (data.current_participants ?? prev?.current_participants) >= (prev?.min_clubs || 0)
+                            current_participants: data.current_participants ?? updated_clubs.length,
+                            inscribed_clubs: updated_clubs,
+                            can_start: (data.current_participants ?? updated_clubs.length) >= prev.min_clubs
+                        };
+                    });
+                } else if (data.type === 'club_left_waiting') {
+                    set_room_info((prev) => {
+                        if (!prev) return prev;
+                        const updated_clubs = (prev.inscribed_clubs || []).filter(id => id !== data.club_id);
+                        return{
+                            ...prev,
+                            current_participants: data.current_participants ?? updated_clubs.length,
+                            inscribed_clubs: updated_clubs,
+                            can_start: (data.current_participants ?? updated_clubs.length) >= prev.min_clubs
                         };
                     });
                 } else if (data.type === 'league_started') {
-                    setRedirect_url(data.redirect_url);
+                    set_redirect_url(data.redirect_url);
                 } else if (data.type === 'league_cancelled') {
-                    setRedirect_url(data.redirect_url);
+                    set_redirect_url(data.redirect_url);
                 } else if (data.type === 'error') {
-                    setError(data.message);
+                    set_error(data.message);
                 }
             } catch (err) {
                 console.error('Error al procesar mensaje de WS:', err);
@@ -42,7 +65,7 @@ export function use_league_waiting_socket(league_id, club_id){
         };
         
         ws.onerror = () => {
-            setError('Error en la conexion con el servidor.');
+            set_error('Error en la conexion con el servidor.');
         }
         return () => {
             if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
