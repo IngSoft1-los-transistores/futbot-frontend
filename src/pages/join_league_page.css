@@ -24,6 +24,30 @@
   color: var(--fb-text);
 }
 
+.join-league-password-label {
+  font-family: var(--fb-font-body);
+  font-size: 12px;
+  color: var(--fb-text-muted);
+}
+
+.join-league-password {
+  width: 100%;
+  max-width: 360px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--fb-panel-border);
+  border-radius: var(--fb-radius-sm);
+  background: var(--fb-input);
+  color: var(--fb-text);
+  font-family: var(--fb-font-body);
+  font-size: 14px;
+}
+
+.join-league-password:focus-visible {
+  outline: 3px solid var(--fb-text);
+  outline-offset: 2px;
+}
+
 /* Drops the browser's default fieldset box around the squad selector. */
 .join-league-squad {
   margin: 0;

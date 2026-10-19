@@ -23,12 +23,14 @@ export function get_league(league_id, options = {}) {
   return request(league_path(league_id), options)
 }
 
-export function join_league(league_id, { starters, substitutes }) {
+// password is only sent for private leagues.
+export function join_league(league_id, { starters, substitutes, password }) {
   return request(`${league_path(league_id)}/join`, {
     method: 'POST',
     body: JSON.stringify({
       titulares: starters.map(to_selection),
       suplentes: substitutes.map(to_selection),
+      ...(password ? { password } : {}),
     }),
   })
 }

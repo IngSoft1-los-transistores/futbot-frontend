@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { list_behaviors, list_players } from '../api/client'
 import {
@@ -24,7 +24,7 @@ const ERROR_MESSAGES = {
   LEAGUE_FULL: 'La liga está completa: ya no es posible unirse.',
   ALREADY_IN_LEAGUE: 'Tu club ya está inscripto en esta liga.',
   LEAGUE_LIMIT_REACHED: 'Ya participás en la cantidad máxima de ligas activas.',
-  WRONG_LEAGUE_PASSWORD: 'Esta liga es privada: para unirte necesitás su contraseña.',
+  WRONG_LEAGUE_PASSWORD: 'La contraseña no es correcta. Revisala y volvé a confirmar.',
   INVALID_SQUAD_PLAYERS:
     'Algún jugador elegido ya no está disponible. Volvé a armar tu escuadra.',
   INVALID_SQUAD_BEHAVIORS:
@@ -43,7 +43,6 @@ function join_block(league) {
   if (league.isEnrolled) return 'ENROLLED'
   if (!OPEN_LEAGUE_STATUSES.includes(league.status)) return 'LEAGUE_NOT_OPEN'
   if (is_league_full(league)) return 'LEAGUE_FULL'
-  if (league.isPrivate) return 'WRONG_LEAGUE_PASSWORD'
   return null
 }
 
@@ -52,6 +51,9 @@ function join_notice(error) {
 
   if (SQUAD_ERRORS.includes(code)) {
     return { kind: 'squad', title: 'Escuadra no válida', message: ERROR_MESSAGES[code] }
+  }
+  if (code === 'WRONG_LEAGUE_PASSWORD') {
+    return { kind: 'password', title: 'Contraseña incorrecta', message: ERROR_MESSAGES[code] }
   }
   if (code && Object.hasOwn(ERROR_MESSAGES, code)) {
     return {
@@ -136,6 +138,8 @@ export default function JoinLeaguePage() {
   const [submitting, set_submitting] = useState(false)
   const [notice, set_notice] = useState(null)
   const [closed_reason, set_closed_reason] = useState(null)
+  const [password, set_password] = useState('')
+  const password_ref = useRef(null)
 
   useEffect(() => {
     if (!read_session()) {
@@ -189,15 +193,27 @@ export default function JoinLeaguePage() {
     reload()
   }
 
+  function fix_password() {
+    set_notice(null)
+    password_ref.current?.focus()
+  }
+
   const is_complete = is_squad_complete(squad)
+  const needs_password = Boolean(league?.isPrivate)
+  // League passwords cannot contain spaces, so edge spaces can only come from pasting.
+  const clean_password = password.trim()
+  const can_confirm = is_complete && (!needs_password || clean_password !== '')
 
   async function confirm() {
-    if (!is_complete || submitting) return
+    if (!can_confirm || submitting) return
 
     set_submitting(true)
 
     try {
-      await join_league(league_id, squad)
+      await join_league(league_id, {
+        ...squad,
+        password: needs_password ? clean_password : undefined,
+      })
       set_league((current) => ({
         ...current,
         enrolledClubs: current.enrolledClubs + 1,
@@ -314,11 +330,33 @@ export default function JoinLeaguePage() {
                   </fieldset>
                 </section>
 
+                {needs_password && (
+                  <section className="join-panel">
+                    <label className="join-league-password-label" htmlFor="league-password">
+                      Contraseña de la liga
+                    </label>
+                    <input
+                      id="league-password"
+                      ref={password_ref}
+                      className="join-league-password"
+                      type="password"
+                      value={password}
+                      onChange={(event) => set_password(event.target.value)}
+                      disabled={submitting}
+                      autoComplete="off"
+                      aria-describedby="league-password-hint"
+                    />
+                    <p id="league-password-hint" className="join-hint">
+                      Es una liga privada: pedile la contraseña a quien la creó.
+                    </p>
+                  </section>
+                )}
+
                 <div className="join-row">
                   <button
                     className="home-action"
                     onClick={confirm}
-                    disabled={!is_complete || submitting}
+                    disabled={!can_confirm || submitting}
                     aria-busy={submitting || undefined}
                   >
                     {submitting ? 'Inscribiendo…' : 'Confirmar inscripción'}
@@ -329,6 +367,9 @@ export default function JoinLeaguePage() {
                       Completá los seis puestos con jugadores distintos y asignales un
                       comportamiento.
                     </p>
+                  )}
+                  {is_complete && !can_confirm && (
+                    <p className="join-hint">Ingresá la contraseña de la liga.</p>
                   )}
                 </div>
               </>
@@ -346,7 +387,12 @@ export default function JoinLeaguePage() {
                 Volver a seleccionar
               </button>
             )}
-            {notice.kind !== 'squad' && (
+            {notice.kind === 'password' && (
+              <button className="home-action" onClick={fix_password}>
+                Corregir contraseña
+              </button>
+            )}
+            {notice.kind !== 'squad' && notice.kind !== 'password' && (
               <button className="home-action" onClick={() => set_notice(null)}>
                 {notice.kind === 'success' ? 'Aceptar' : 'Cerrar'}
               </button>
