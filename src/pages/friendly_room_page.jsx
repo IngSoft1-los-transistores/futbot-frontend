@@ -37,7 +37,8 @@ function error_message(error, fallback) {
 export default function FriendlyRoomPage() {
   const { room_id } = useParams()
   const navigate = useNavigate()
-  const { room, load_error, is_starting, start_error, start, refresh } = useFriendlyRoom(room_id)
+  const [club_id] = useState(localStorage.getItem('club_id'))
+  const { room, load_error, is_starting, start_error, start, refresh } = useFriendlyRoom(room_id, club_id)
   const [view_message, set_view_message] = useState('')
 
   if (load_error) {
