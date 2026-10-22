@@ -3,7 +3,7 @@ import { get_friendly_room, start_friendly_match } from '../api/friendly_rooms'
 
 // Loads the room on mount and refreshes it on explicit user actions.
 // Named useXxx (not snake_case) so the react-hooks lint rules recognize it.
-export function useFriendlyRoom(room_id, club_id) {
+export function useFriendlyRoom(room_id) {
   const [room, set_room] = useState(null)
   const [load_error, set_load_error] = useState(null)
   const [is_starting, set_is_starting] = useState(false)
@@ -18,31 +18,6 @@ export function useFriendlyRoom(room_id, club_id) {
       is_current = false
     }
   }, [room_id])
-
-  const conexion_websocket = useCallback(() => {
-    const ws = new WebSocket(`ws://${window.location.host}/ws/friendly/${room_id}?club_id=${club_id}`)
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (!isValidRoom(data.room)) return
-        if (data.type === 'room_updated') {
-          set_room(data.room)
-        }
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error)
-      }
-    }
-    return () => {
-      ws.close()
-    }
-  }, [room_id])
-  
-  useEffect(() => {
-    const close_ws = conexion_websocket()
-    return () => {
-      close_ws()
-    }
-  }, [conexion_websocket])
 
   // Returns the start response, or null if it failed (see start_error).
   const start = useCallback(async () => {
@@ -64,5 +39,10 @@ export function useFriendlyRoom(room_id, club_id) {
     return data
   }, [room_id])
 
-  return { room, load_error, is_starting, start_error, start, refresh }
+  // Para que el WebSocket pueda actualizar el estado
+  const update_room = useCallback((new_room) => {
+    set_room(new_room)
+  }, [])
+
+  return { room, load_error, is_starting, start_error, start, refresh, update_room }
 }
