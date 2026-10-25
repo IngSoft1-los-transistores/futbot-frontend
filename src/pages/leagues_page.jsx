@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { list_leagues } from '../api/client'
 import { read_session } from '../auth/session'
+import { useLeaguesSocket } from '../hooks/use_leagues_socket'
 import './Home.css'
 import './leagues_page.css'
 
@@ -15,15 +15,23 @@ function league_word(count) {
 
 export default function LeaguesPage() {
   const navigate = useNavigate()
-  const [leagues, set_leagues] = useState([])
-  const [status, set_status] = useState('loading')   // loading | ready | error
-  const [error, set_error] = useState('')
-  const [search_text, set_search_text] = useState('') // lo que escribe el usuario
-  const [query, set_query] = useState('')             // el filtro que ya se aplicó
-  const [attempt, set_attempt] = useState(0)          // subirlo fuerza una nueva consulta
-  const [selected, set_selected] = useState(null)     // liga elegida para unirse
+  const [search_text, set_search_text] = useState('')  // lo que escribe el usuario
+  const [query, set_query] = useState('')              // el filtro que ya se aplicó
+  const [selected, set_selected] = useState(null)      // liga elegida para unirse
 
-  // Sin sesión no hay nada que mostrar; si vence mientras tanto, vuelve al login
+  // Cada vez que llega un listado se refrescan los datos de la liga elegida
+  const refresh_selected = useCallback((loaded, name) => {
+    set_selected((current) => {
+      if (!current) return current
+      const updated = loaded.find((league) => league.id === current.id)
+      if (updated) return updated
+      return name ? current : null    // con filtro, que no aparezca no significa que haya desaparecido
+    })
+  }, [])
+
+  const { data, connection } = useLeaguesSocket(query, refresh_selected)
+
+  // Sin sesión no hay nada que mostrar; si vence o el canal rechaza el token, vuelve al login
   useEffect(() => {
     if (!read_session()) {
       navigate('/login', { replace: true })
@@ -34,61 +42,28 @@ export default function LeaguesPage() {
     return () => window.removeEventListener('futbot:unauthorized', unauthorized)
   }, [navigate])
 
-  // Consulta el listado al entrar y cada vez que cambia la búsqueda
-  useEffect(() => {
-    if (!read_session()) return
-    const controller = new AbortController()
-    list_leagues({ name: query, signal: controller.signal })
-      .then((loaded) => {
-        if (controller.signal.aborted) return
-        set_leagues(loaded)
-        set_selected((current) => {
-          if (!current) return current
-          const updated = loaded.find((league) => league.id === current.id)
-          if (updated) return updated
-          return query ? current : null   //filtro, sigue existiendo aunque no aparezca
-        })
-        set_error('')
-        set_status('ready')
-      })
-      .catch((cause) => {
-        if (controller.signal.aborted || cause.name === 'AbortError') return
-        if (cause.status === 401) {
-          navigate('/login', { replace: true })
-          return
-        }
-        set_error(cause.status ? cause.message : 'No se pudo conectar con el servidor.')
-        set_status('error')
-      })
-    return () => controller.abort()    // una búsqueda nueva descarta la respuesta de la anterior
-  }, [query, attempt, navigate])
-
-  function reload() {
-    set_status('loading')
-    set_attempt((current) => current + 1)
-  }
+  // Mientras no llegue el listado de la búsqueda actual, se muestra "Cargando"
+  const loading = !data || data.name !== query
+  const leagues = data?.leagues ?? []
 
   function search(event) {
     event.preventDefault()
     set_query(search_text.trim())
-    reload()
   }
 
   function clear_search() {
     set_search_text('')
     set_query('')
-    reload()
   }
 
   return (
     <div className="home-page">
-      <main className="home-content" aria-busy={status === 'loading'}>
+      <main className="home-content" aria-busy={loading}>
         <section className="home-welcome" aria-labelledby="leagues-title">
           <h1 id="leagues-title">Ligas disponibles</h1>
-          <p>Buscá una liga por nombre y seleccioná aquella en la que querés participar.</p>
+          <p>Buscá una liga por nombre y seleccioná aquella en la que querés participar. El listado se actualiza solo.</p>
           <div className="leagues-row">
             <button className="home-action" onClick={() => navigate('/home')}>Volver</button>
-            <button className="home-action" onClick={reload} disabled={status === 'loading'}>Actualizar</button>
           </div>
         </section>
 
@@ -114,23 +89,21 @@ export default function LeaguesPage() {
         {selected && (
           <section className="leagues-selection" aria-labelledby="leagues-selected-title">
             <h2 id="leagues-selected-title">Liga seleccionada: {selected.name}</h2>
-            <p>
-              {participants_label(selected.participants_count)} · {selected.started ? 'Iniciada' : 'Sin iniciar'}
-              {selected.is_private ? ' · Privada' : ''}
-              </p>
+            <p>{participants_label(selected.participants_count)} · {selected.started ? 'Iniciada' : 'Sin iniciar'}</p>
             {/* TICKET "UNIRSE A LIGA": el botón para continuar va acá, usando `selected` */}
             <button className="home-action" onClick={() => set_selected(null)}>Quitar selección</button>
           </section>
         )}
 
-        {status === 'loading' && <div className="home-notice" role="status">Cargando ligas…</div>}
+        {connection === 'offline' && (
+          <p className="home-notice home-error" role="alert">
+            Sin conexión con el servidor. Reintentando…
+          </p>
+        )}
 
-        {status === 'error' && <>
-          <p className="home-notice home-error" role="alert">{error}</p>
-          <button className="home-action" onClick={reload}>Reintentar</button>
-        </>}
+        {loading && <div className="home-notice" role="status">Cargando ligas…</div>}
 
-        {status === 'ready' && leagues.length === 0 && (
+        {!loading && leagues.length === 0 && (
           <p className="home-notice" role="status">
             {query
               ? `No hay ligas que coincidan con "${query}".`
@@ -138,7 +111,7 @@ export default function LeaguesPage() {
           </p>
         )}
 
-        {status === 'ready' && leagues.length > 0 && <>
+        {!loading && leagues.length > 0 && <>
           <p className="leagues-count" role="status">
             {leagues.length} {league_word(leagues.length)}{query ? ` para "${query}"` : ''}
           </p>
@@ -153,7 +126,6 @@ export default function LeaguesPage() {
                     <span className={`leagues-chip ${league.started ? 'leagues-chip--started' : 'leagues-chip--open'}`}>
                       {league.started ? 'Iniciada' : 'Sin iniciar'}
                     </span>
-                    {league.is_private && <span className="leagues-chip leagues-chip--private">Privada</span>}
                   </p>
                   <button
                     className="home-action"
