@@ -1688,6 +1688,9 @@ test('No realiza petición HTTP extra al recibir la sala completa por WebSocket'
   server_socket.send(JSON.stringify(json_sala_actualizada));
   await expect(page.getByText(/Lista para iniciar/i)).toBeVisible();
 
+  // Espero antes de evaluar el contador
+  await page.waitForTimeout(500); 
+  
   expect(state.contador_get).toBe(llamadas_get_iniciales);
   
 }
@@ -1705,7 +1708,7 @@ test('Si el socket se cierra, la pantalla conserva el último estado y muestra a
   await expect(page.locator('body')).toContainText(/Esperando rival/i);
 
   // Debe aparecer el mensaje de error
-  const alerta = page.getByText('Se perdió la conexión.'); 
+  const alerta = page.getByText('Se perdió la conexión con el servidor. Intentando reestablecer...'); 
   await expect(alerta).toBeVisible();
 });
 
