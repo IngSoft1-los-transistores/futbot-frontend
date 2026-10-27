@@ -1533,3 +1533,195 @@ test('un 401 al confirmar borra la sesión y lleva al login', async ({
     await stored_session(page),
   ).toBeNull()
 })
+
+// Helpers para test de ws
+
+async function setupSalaEsperandoRival(page) {
+  // Hace el setup inicial y devuelve el socket y el contador
+  let server_socket = null;
+  // Envolvemos el contador en un objeto para pasarlo por referencia
+  const state = { contador_get: 0 };  
+
+  // Intercepta WebSocket
+  await page.routeWebSocket('**/ws/friendly/**', ws => {
+    server_socket = ws;
+  });
+
+  // Intercepta GET de la sala
+  await page.route(`**/api/friendly/rooms/${ROOM_ID}`, async (route) => {
+    if (route.request().method() === 'GET') {
+      state.contador_get++;
+      await route.fulfill({
+        status: 200,
+        json: {
+          roomId: ROOM_ID,
+          status: 'waitingGuest',
+          roomCode: ROOM_CODE,
+          matchId: null,
+          homeClub: { 
+            clubId: session.club_id, 
+            clubName: 'Club Local', 
+            players: [{
+              playerId: 'home-player-1',
+              name: 'Jugador Local',
+              role: 'starter',
+              behaviorId: 'behavior-1',
+              behaviorName: 'Delantero',
+            }]
+          },
+          awayClub: null,
+        },
+      });
+    } else {
+      route.continue();
+    }
+  });
+
+  const join_requests = await mock_join(page, 200, joined);
+
+  await open_join_page(page);
+  await fill_team(page);
+  await confirm_button(page).click();
+
+  // Espera la conexión
+  await expect.poll(() => server_socket !== null, { timeout: 5000 }).toBeTruthy();
+
+  return { server_socket, state, join_requests };
+}
+
+const json_sala_actualizada = {
+    type: 'room_updated',
+    room: {
+      roomId: ROOM_ID,
+      roomCode: ROOM_CODE,
+      status: 'readyToStart',
+      matchId: null,
+      homeClub: {
+        clubId: session.club_id,
+        clubName: 'Club Local',
+        players: [
+          {            
+            playerId: 'home-player-1',
+            name: 'Jugador Local',
+            role: 'starter',
+            behaviorId: 'behavior-1',
+            behaviorName: 'Delantero',
+          }
+        ],
+      },
+      awayClub: {
+        clubId: 'away-club-id',
+        clubName: 'Club Visitante',
+        players: [
+          {
+            playerId: 'away-player-1',
+            name: 'Jugador Visitante',
+            role: 'starter',
+            behaviorId: 'behavior-1',
+            behaviorName: 'Defensa',
+          },
+        ],
+      },
+    },
+  }
+
+// Test para ws 
+test('Debe conectar al ws con el ID de la sala y el ID del club correctos', async ({
+  page,
+}) => {
+  let ws_url = '';
+
+  page.on('websocket', (ws) => {
+    if(ws.url().includes('/ws/friendly/')) {
+      ws_url = ws.url();
+    }
+  });
+  const join_requests = await mock_join(page, 200, joined);
+  
+  await open_join_page(page)
+  await fill_team(page)
+  await confirm_button(page).click()
+
+  expect(join_requests).toHaveLength(1);
+  expect(join_requests[0].body).toEqual(expected_body);
+
+  await expect.poll(
+    () => ws_url,
+    {
+      message: 'Esperando que se conecte al ws con la URL correcta',
+      timeout: 5000,
+    }
+  ).toContain(`/ws/friendly/${ROOM_ID}?club_id=${session.club_id}`);
+}
+)
+
+test('Cuando se recibe room_updated, se actualiza el estado de la sala', async ({
+  page,
+}) => {
+  const { server_socket } = await setupSalaEsperandoRival(page)
+  
+  await expect(
+    page.getByRole ('button', { name: 'Esperando rival'})
+  ).toBeVisible();
+
+  server_socket.send(JSON.stringify(json_sala_actualizada)
+  );
+  await expect(page.getByText('Club Visitante')).toBeVisible()
+
+  await expect(
+    page.locator('.fb-room-header .fb-chip')
+  ).toHaveText('Lista para iniciar')
+
+  await expect(
+    page.getByRole('button', { name: 'Iniciar partido' })
+  ).toBeEnabled()
+
+})
+
+test('No realiza petición HTTP extra al recibir la sala completa por WebSocket', async ({ page }) => {
+  const { server_socket, state } = await setupSalaEsperandoRival(page);
+  // Envolvemos el contador en un objeto para pasarlo por referencia
+
+  const llamadas_get_iniciales = state.contador_get;  
+  
+  
+  server_socket.send(JSON.stringify(json_sala_actualizada));
+  await expect(page.getByText(/Lista para iniciar/i)).toBeVisible();
+
+  // Espero antes de evaluar el contador
+  await page.waitForTimeout(500); 
+  
+  expect(state.contador_get).toBe(llamadas_get_iniciales);
+  
+}
+);
+
+test('Si el socket se cierra, la pantalla conserva el último estado y muestra aviso', async ({ page }) => {
+  const { server_socket } = await setupSalaEsperandoRival(page);
+
+  await expect(page.locator('body')).toContainText(/Esperando rival/i);
+
+  // Le corta la conexión desde el servidor (código 1006 es "Cierre anormal")
+  server_socket.close(1006);
+
+  // El estado se conserva (no se fue a blanco ni desapareció)
+  await expect(page.locator('body')).toContainText(/Esperando rival/i);
+
+  // Debe aparecer el mensaje de error
+  const alerta = page.getByText('Se perdió la conexión con el servidor. Intentando reestablecer...'); 
+  await expect(alerta).toBeVisible();
+});
+
+test('Evento con formato inválido, no debe rompe el renderizado ni reemplazar la sala actual', async ({page}) => {
+  const { server_socket } = await setupSalaEsperandoRival(page);
+  
+  await expect(page.locator('body')).toContainText(/Esperando rival/i);
+
+  // Manda mensaje no valido por ws
+  server_socket.send('mensaje no válido')
+
+  await expect(
+    page.getByRole('button', { name: 'Esperando rival' })
+  ).toBeVisible()
+
+});
