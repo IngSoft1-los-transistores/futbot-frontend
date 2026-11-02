@@ -6,6 +6,15 @@ const WS_URL = `${API_URL.replace(/^http/, 'ws')}/ws/leagues`   // http -> ws, h
 const CLOSE_UNAUTHORIZED = 4401
 const MAX_DELAY_MS = 15000
 
+function notify_unauthorized() {
+  window.dispatchEvent(new Event('futbot:unauthorized'))
+}
+
+function expire_session(failed) {
+  if(read_session()?.refresh_token === failed?.refresh_token) clear_session()
+    notify_unauthorized()
+}
+
 // Deja de cada liga solo lo que usa la pantalla
 function normalize_league(raw) {
   return {
@@ -47,7 +56,12 @@ export function useLeaguesSocket(query, on_leagues) {
 
     function connect() {
       const session = read_session()
-      if (!session) return
+      if (!session) {
+        closed = true
+        set_connection('offline')
+        notify_unauthorized()
+        return
+      }
       const socket = new WebSocket(WS_URL)
       socket_ref.current = socket
 
@@ -79,8 +93,8 @@ export function useLeaguesSocket(query, on_leagues) {
         if (closed) return                            // cierre propio al salir de la pantalla
         set_connection('offline')
         if (event.code === CLOSE_UNAUTHORIZED) {      // el token no sirve: mismo trato que un 401 del HTTP
-          clear_session()
-          window.dispatchEvent(new Event('futbot:unauthorized'))
+          closed = true
+          expire_session(session)
           return
         }
         timer = setTimeout(connect, Math.min(1000 * 2 ** failures, MAX_DELAY_MS))

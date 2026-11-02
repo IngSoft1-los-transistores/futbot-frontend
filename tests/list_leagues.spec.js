@@ -311,3 +311,29 @@ test('si la liga seleccionada desaparece del listado, se descarta la selección'
   await expect(page.getByRole('listitem')).toHaveCount(2)
   await expect(page.getByRole('heading', { name: /Liga seleccionada/ })).toHaveCount(0)
 })
+
+test('si la sesión se vence con el canal cortado, no queda reintentando: lleva al login', async ({ page }) => {
+  const mock = await mock_leagues_socket(page)
+  await open_leagues(page)
+  await expect(page.getByRole('listitem')).toHaveCount(3)
+  await page.evaluate(() => localStorage.removeItem('futbot.session'))    // la sesión desaparece
+  mock.connections.at(-1).ws.close({ code: 1001 })                        // y se corta la conexión
+  await expect(page).toHaveURL('/login')
+})
+
+test('un 4401 no borra una sesión nueva abierta en otra pestaña', async ({ page }) => {
+  await page.routeWebSocket(WS_URL, (ws) => {
+    ws.onMessage(async () => {
+      // mientras el canal se cierra, otra pestaña ya inició sesión de nuevo
+      await page.evaluate((value) => localStorage.setItem('futbot.session', JSON.stringify(value)), {
+        ...session, access_token: 'token-nuevo', refresh_token: 'refresh-nuevo',
+      })
+      ws.close({ code: 4401, reason: 'No autorizado' })
+    })
+  })
+  await seed_session(page)
+  await page.goto('/leagues')
+  await expect(page).toHaveURL(/\/(login|home)$/)
+  const stored = await stored_session(page)
+  expect(stored?.refresh_token).toBe('refresh-nuevo')                     // la sesión nueva se conserva
+})
