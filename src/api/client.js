@@ -160,7 +160,6 @@ export async function list_behaviors(options = {}) {
 }
 
 // Convierte el equipo del frontend al formato usado por el endpoint /join.
-// Conservamos el contrato actual: titulares, suplentes, playerId y behaviorId.
 export function join_friendly_room({
   room_id,
   code,
@@ -178,8 +177,8 @@ export function join_friendly_room({
       method: 'POST',
       body: JSON.stringify({
         code,
-        titulares: starters.map(to_payload),
-        suplentes: substitutes.map(to_payload),
+        starters: starters.map(to_payload),
+        substitutes: substitutes.map(to_payload),
       }),
     }
   )
