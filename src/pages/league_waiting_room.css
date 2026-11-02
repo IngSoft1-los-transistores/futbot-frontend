@@ -8,6 +8,22 @@
   flex-direction: column;
 }
 
+.waiting-container {
+  min-height: 100vh;
+  width: 100%;
+  background: #0b2a16;
+  color: #f3ecdd;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.waiting-notice {
+  font-size: 1.2rem;
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: #c9d6c5;
+}
+
 .waiting-topbar {
   min-height: 72px;
   padding: 0 32px;

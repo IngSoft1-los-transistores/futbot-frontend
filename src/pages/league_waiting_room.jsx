@@ -90,8 +90,16 @@ export default function LeagueWaitingRoom() {
                 </button>
               </div>
             ) : (
-              <div className="waiting-notice-card">
-                <p>Esperando a que el creador de la sala dé inicio a la liga...</p>
+              <div className="creator-actions">
+                <div className="waiting-notice-card">
+                  <p>Esperando a que el creador de la sala dé inicio a la liga...</p>
+                </div>
+                <button
+                  className="waiting-btn-danger"
+                  onClick={() => send_action('leave_room')}
+                  >
+                    Abandonar Liga
+                  </button>
               </div>
             )}
           </main>
