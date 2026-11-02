@@ -1,6 +1,6 @@
 import {useState, useEffect} from 'react'
 import { useNavigate, useParams} from 'react-router-dom'
-import Editor, { loader } from '@monaco-editor/react'
+import Editor from '@monaco-editor/react'
 import { create_behavior, update_behavior, get_behavior } from '../api/behaviors.js'
 import './behavior_editor_page.css'
 
@@ -23,7 +23,9 @@ export default function BehaviorEditorPage() {
   const is_editing = Boolean(behavior_id)
 
   const [name, setName] = useState('')
+  const [originalName, setOriginalName] = useState('') // Para verificar si el nombre ha cambiado
   const [code, setCode] = useState(PLANTILLA_INICIAL)
+  const [originalCode, setOriginalCode] = useState(PLANTILLA_INICIAL) // Para verificar si el código ha cambiado
 
   const [error, setError] = useState(null)
   const [is_saving, set_is_saving] = useState(false)
@@ -34,8 +36,11 @@ export default function BehaviorEditorPage() {
     async function loadData() {
       try {
         const data= await get_behavior(behavior_id)
+        set_is_saving(true)
         setName(data.name)
+        setOriginalName(data.name)
         setCode(data.code)
+        setOriginalCode(data.code)
       } catch (error) {
         setError(error.message || "Error al cargar comportamiento")
       } finally {
@@ -78,7 +83,7 @@ export default function BehaviorEditorPage() {
       set_is_saving(false)
     }
   }
-
+  const has_changes = name !== originalName || code !== originalCode
   return (
     <div className="behavior-editor">
       <div className="behavior-editor__container">
@@ -87,7 +92,7 @@ export default function BehaviorEditorPage() {
         <div className="behavior-editor__breadcrumb">
           <button 
           type="button"
-          onClick={() => navigate('/-1')}
+          onClick={() => navigate('/behaviors')}
           className="behavior-editor__breadcrumb-link"
           >
             &larr; Laboratorio táctico
@@ -243,7 +248,7 @@ export default function BehaviorEditorPage() {
             <button
               type="submit"
               form="behavior-form"
-              disabled={is_saving || !name.trim() || !code.trim()}
+              disabled={ is_saving || !name.trim() || !code.trim() || (!has_changes && is_editing)} 
               className="behavior-editor__button"
             >
               {is_saving ? 'Guardando...' : is_editing ? 'Actualizar comportamiento' : '+ Crear comportamiento'}

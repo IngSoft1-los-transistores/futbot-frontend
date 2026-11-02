@@ -10,10 +10,10 @@ export const create_behavior = (data, options = {}) =>
     }
   )
 export const get_behavior = (behavior_id, options = {}) =>
-  request(`/api/behaviors/${behavior_id}`, options)
+  request(`/api/behaviors/${encodeURIComponent(behavior_id)}`, options)
 
 export const update_behavior = (behavior_id, data, options = {}) =>
-  request(`/api/behaviors/${behavior_id}`,
+  request(`/api/behaviors/${encodeURIComponent(behavior_id)}`,
     { ...options,
       method: 'PUT',
       body: JSON.stringify(data)

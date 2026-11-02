@@ -24,11 +24,23 @@ function BehaviorRow({ name, code, isDefault, onDetails, onEdit }) {
                     onClick={onDetails}
                 >
                     Ver detalles
+                
                 </button>
                 {/* Botón Editar */}
                 <button 
-                    className="border border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b] px-3 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
+                    type="button"
+                    disabled={isDefault}
+                    title={
+                        isDefault 
+                          ? "No se puede editar un comportamiento preprogramado"
+                          : "Editar comportamiento"                        
+                    }
                     onClick={onEdit}
+                    className={`px-3 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0 border ${
+                        isDefault 
+                            ? 'border-green-900/50 text-green-800 opacity-50 cursor-not-allowed' 
+                            : 'border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b]'
+                    }`}
                 >
                     Editar
                 </button>
