@@ -57,7 +57,13 @@ export default function BehaviorEditorPage() {
         
         {/* HEADER */}
         <div className="behavior-editor__breadcrumb">
-          &larr; Laboratorio táctico / Comportamientos / <span>Crear</span>
+          <button 
+          type="button"
+          onClick={() => navigate('/-1')}
+          className="behavior-editor__breadcrumb-link"
+          >
+            &larr; Laboratorio táctico
+          </button>
         </div>
 
         <div className="behavior-editor__header">
@@ -133,11 +139,6 @@ export default function BehaviorEditorPage() {
                       }}
                     />
                   </div>
-
-                  <div className="behavior-editor__editor-bottombar">
-                    <span>UTF-8</span>
-                    <span>Lin. 14, col. 1 &nbsp;&nbsp;&middot;&nbsp;&nbsp; Espacios: 4</span>
-                  </div>
                 </div>
               </div>
             </form>
@@ -147,27 +148,55 @@ export default function BehaviorEditorPage() {
           <div className="behavior-editor__panel behavior-editor__sidebar">
             <h3>📖 Guía rápida</h3>
             <p className="behavior-editor__sidebar-desc">
-              Cada comportamiento define cómo toma decisiones tu jugador en el campo.
+              Define el comportamiento de tu jugador usando la API segura de FutBot.
             </p>
 
             <div className="behavior-editor__sidebar-step">
-              <h4>Nombra tu estrategia</h4>
-              <p>Elige un nombre claro para reconocerla cuando configures a tus jugadores.</p>
+              <h4>1. Define la función obligatoria</h4>
+              <p>
+                Tu código debe contener exactamente una función llamada{' '}
+                <code>behavior(player)</code>, con un único parámetro.
+              </p>
+              <pre className="behavior-editor__code-example">
+                {`def behavior(player):
+                ...`}
+              </pre>
             </div>
             
             <div className="behavior-editor__sidebar-step">
-              <h4>Escribe tu lógica</h4>
-              <p>Parte del ejemplo o reemplázalo por tu propio código Python. Cuida la indentación.</p>
+              <h4>2. Consulta el estado del juego</h4>
+              <p>Podés consultar información mediante estos métodos:</p>
+              <ul className="behavior-editor__api-list">
+                <li><code>player.tengo_pelota()</code></li>
+                <li><code>player.club_tiene_pelota()</code></li>
+                <li><code>player.encontrar_pelota()</code></li>
+                <li><code>player.encontrar_aliado()</code></li>
+                <li><code>player.encontrar_enemigo()</code></li>
+                <li><code>player.encontrar_arco_aliado()</code></li>
+                <li><code>player.encontrar_arco_enemigo()</code></li>
+                <li><code>player.encontrar_mis_coordenadas()</code></li>
+              </ul>
             </div>
             
             <div className="behavior-editor__sidebar-step">
-              <h4>Guarda el comportamiento</h4>
-              <p>Una vez creado, podrás encontrarlo en la sección Comportamientos.</p>
+              <h4>3. Ejecuta una acción</h4>
+              <p>
+                Las acciones reciben una posición obtenida mediante uno de los métodos de consulta:
+              </p>
+              <ul className="behavior-editor__api-list">
+                <li><code>player.pasar(destino)</code></li>
+                <li><code>player.patear_pelota(destino)</code></li>
+                <li><code>player.correr(destino)</code></li>
+              </ul>
             </div>
 
             <div className="behavior-editor__sidebar-note">
-              <span>SOBRE EL EJEMPLO</span>
-              <p>La plantilla es orientativa. Adapta los parámetros y las acciones a tu estrategia.</p>
+              <span>RESTRICCIONES</span>
+              <p>
+                No se permiten imports ni funciones como{' '}
+                <code>eval</code>, <code>exec</code>, <code>open</code>,
+                <code>input</code> o <code>compile</code> 
+              </p>
             </div>
           </div>
         </div>

@@ -33,6 +33,20 @@
   margin-bottom: 16px;
 }
 
+.behavior-editor__breadcrumb-link {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  transition: color 150ms ease;
+}
+
+.behavior-editor__breadcrumb-link:hover {
+  color: #ffffff;
+}
+
 .behavior-editor__breadcrumb span {
   color: var(--be-accent);
 }
@@ -167,6 +181,40 @@
   margin: 0;
   font-size: 0.75rem;
   color: var(--be-text-main);
+}
+
+.behavior-editor__sidebar-step code,
+.behavior-editor__sidebar-note code {
+  color: var(--be-accent);
+  font-family: var(--fb-font-body);
+  font-size: 0.8rem;
+}
+
+.behavior-editor__code-example {
+  margin: 12px 0 0;
+  padding: 12px;
+  overflow-x: auto;
+  color: var(--be-text-main);
+  background: var(--be-bg-input);
+  border: 1px solid var(--be-border);
+  border-radius: var(--fb-radius-sm);
+  font-family: var(--fb-font-body);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.behavior-editor__api-list {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--be-text-muted);
+  font-size: 0.75rem;
+}
+
+.behavior-editor__api-list code {
+  color: var(--be-accent);
+  font-family: var(--fb-font-body);
 }
 
 /* Form Elements */
