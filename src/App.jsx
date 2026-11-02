@@ -79,6 +79,7 @@ export default function App() {
         <Route path="/auth/login" element={<Navigate to="/login" replace />} />
         <Route path="/behaviors" element={<DashboardLayout><BehaviorPage /></DashboardLayout>} />
         <Route path="/behaviors/create" element={<DashboardLayout><BehaviorEditorPage /></DashboardLayout>} />
+        <Route path="/behaviors/edit/:behavior_id" element={<DashboardLayout><BehaviorEditorPage /></DashboardLayout>} />
         <Route path="/login" element={<Login />} />
         <Route path="/matches/:match_id" element={<Match />} />
         <Route path="/home" element={<Home />} />

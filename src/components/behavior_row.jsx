@@ -1,5 +1,5 @@
 
-function BehaviorRow({ name, code, isDefault, onDetails }) {
+function BehaviorRow({ name, code, isDefault, onDetails, onEdit }) {
     return (
         <div className="flex items-center px-6 py-4 border-b border-green-900/30 hover:bg-[#112419]/50 transition-colors">
             
@@ -18,12 +18,19 @@ function BehaviorRow({ name, code, isDefault, onDetails }) {
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDefault ? 'bg-[#f0a95b]' : 'bg-blue-500'}`}></span>
                     <span className="truncate">{isDefault ? 'Preprogramado' : 'Propio'}</span>
                 </div>
-                {/* Botón  */}
+                {/* Botón Ver detalles */}
                 <button 
                     className="border border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b] px-3 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
                     onClick={onDetails}
                 >
                     Ver detalles
+                </button>
+                {/* Botón Editar */}
+                <button 
+                    className="border border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b] px-3 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
+                    onClick={onEdit}
+                >
+                    Editar
                 </button>
               
             </div>

@@ -1,7 +1,7 @@
 import {useState, useEffect} from 'react'
-import { useNavigate } from 'react-router-dom'
-import Editor from '@monaco-editor/react'
-import { create_behavior } from '../api/behaviors.js'
+import { useNavigate, useParams} from 'react-router-dom'
+import Editor, { loader } from '@monaco-editor/react'
+import { create_behavior, update_behavior, get_behavior } from '../api/behaviors.js'
 import './behavior_editor_page.css'
 
 const PLANTILLA_INICIAL = `# Presión alta
@@ -19,11 +19,31 @@ def behavior(player):
 
 export default function BehaviorEditorPage() {
   const navigate = useNavigate()
+  const { behavior_id } = useParams()
+  const is_editing = Boolean(behavior_id)
+
   const [name, setName] = useState('')
   const [code, setCode] = useState(PLANTILLA_INICIAL)
 
   const [error, setError] = useState(null)
   const [is_saving, set_is_saving] = useState(false)
+
+  useEffect(() => {
+    if (!is_editing) return
+    
+    async function loadData() {
+      try {
+        const data= await get_behavior(behavior_id)
+        setName(data.name)
+        setCode(data.code)
+      } catch (error) {
+        setError(error.message || "Error al cargar comportamiento")
+      } finally {
+        set_is_saving(false)
+      }
+    }
+    loadData()
+  }, [is_editing, behavior_id])
 
   // Personalizacion de los colores de editor
   const handleEditorWillMount = (monaco) => {
@@ -42,8 +62,15 @@ export default function BehaviorEditorPage() {
     e.preventDefault()
     setError(null)
     set_is_saving(true)
+
+    const payload = { name, code }
+
     try {
-      await create_behavior({ name, code })
+      if (is_editing) {
+        await update_behavior(behavior_id, payload)
+      } else {
+        await create_behavior(payload)
+      }
       navigate('/behaviors')
     } catch (error) {
       setError(error.message || "Error al guardar comportamiento")
@@ -51,6 +78,7 @@ export default function BehaviorEditorPage() {
       set_is_saving(false)
     }
   }
+
   return (
     <div className="behavior-editor">
       <div className="behavior-editor__container">
@@ -72,7 +100,7 @@ export default function BehaviorEditorPage() {
               {'<>'}
             </div>
             <div>
-              <h1>Crear comportamiento</h1>
+              <h1>{is_editing ? 'Editar comportamiento' : 'Crear comportamiento'}</h1>
               <p>Define la lógica de tu jugador y prepara una nueva estrategia para el campo.</p>
             </div>
           </div>
@@ -218,7 +246,7 @@ export default function BehaviorEditorPage() {
               disabled={is_saving || !name.trim() || !code.trim()}
               className="behavior-editor__button"
             >
-              {is_saving ? 'Guardando...' : '+ Crear comportamiento'}
+              {is_saving ? 'Guardando...' : is_editing ? 'Actualizar comportamiento' : '+ Crear comportamiento'}
             </button>
           </div>
         </div>
