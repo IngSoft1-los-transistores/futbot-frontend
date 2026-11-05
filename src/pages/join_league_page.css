@@ -48,7 +48,6 @@
   outline-offset: 2px;
 }
 
-/* Drops the browser's default fieldset box around the squad selector. */
 .join-league-squad {
   margin: 0;
   padding: 0;

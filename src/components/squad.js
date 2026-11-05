@@ -11,7 +11,6 @@ export function empty_squad() {
 
 const is_filled = (value) => value !== '' && value != null
 
-// Every slot has a player and a behavior, and no player is repeated.
 export function is_squad_complete(squad) {
   const slots = [...squad.starters, ...squad.substitutes]
 
@@ -22,7 +21,6 @@ export function is_squad_complete(squad) {
   )
 }
 
-// Same shape as the backend's mySquad, built from the local selection.
 export function squad_entries(squad, players, behaviors) {
   const name_of = (items, id) =>
     items.find((item) => String(item.id) === String(id))?.name ?? ''
