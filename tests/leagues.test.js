@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { request } from '../src/api/client'
 import { read_session } from '../src/auth/session'
 import {
+  apply_league_list,
   createLeague,
+  find_league_by_code,
   free_spots,
   get_league,
   is_league_full,
@@ -36,6 +38,55 @@ describe('get_league', () => {
     get_league('liga/1', { signal })
 
     expect(request).toHaveBeenCalledWith('/api/leagues/liga%2F1', { signal })
+  })
+})
+
+describe('find_league_by_code', () => {
+  it('requests the league with an encoded code and forwards the options', () => {
+    const { signal } = new AbortController()
+
+    find_league_by_code('a b/c', { signal })
+
+    expect(request).toHaveBeenCalledWith('/api/leagues/by-code/a%20b%2Fc', { signal })
+  })
+})
+
+describe('apply_league_list', () => {
+  const league = {
+    leagueId: 'league-1',
+    name: 'Liga del Barrio',
+    status: 'waitingGuest',
+    enrolledClubs: 2,
+    maxClubs: 8,
+  }
+  const listed = (overrides = {}) => ({
+    id: 'league-1',
+    name: 'Liga del Barrio',
+    participants_count: 3,
+    started: false,
+    ...overrides,
+  })
+
+  it('updates the enrolled clubs and keeps the rest of the detail', () => {
+    expect(apply_league_list(league, [listed()])).toEqual({ ...league, enrolledClubs: 3 })
+  })
+
+  it('moves an open league to in progress when it started', () => {
+    expect(apply_league_list(league, [listed({ started: true })]).status).toBe('inProgress')
+  })
+
+  it('does not turn a finished league back to in progress', () => {
+    const finished = { ...league, status: 'finished' }
+
+    expect(apply_league_list(finished, [listed({ started: true })]).status).toBe('finished')
+  })
+
+  it('keeps the league untouched when the list does not include it', () => {
+    expect(apply_league_list(league, [listed({ id: 'other-league' })])).toBe(league)
+  })
+
+  it('ignores the list until the league has loaded', () => {
+    expect(apply_league_list(null, [listed()])).toBeNull()
   })
 })
 

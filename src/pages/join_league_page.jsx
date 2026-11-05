@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { list_behaviors, list_players } from '../api/client'
 import {
+  apply_league_list,
   free_spots,
   get_league,
   is_league_full,
@@ -14,6 +15,7 @@ import Modal from '../components/modal'
 import PlayerRow from '../components/molecules/player_row'
 import SquadSelector from '../components/SquadSelector'
 import { empty_squad, is_squad_complete, squad_entries } from '../components/squad'
+import { useLeaguesSocket } from '../hooks/use_leagues_socket'
 import './Home.css'
 import './join_friendly.css'
 import './join_league_page.css'
@@ -25,20 +27,15 @@ const ERROR_MESSAGES = {
   ALREADY_IN_LEAGUE: 'Tu club ya está inscripto en esta liga.',
   LEAGUE_LIMIT_REACHED: 'Ya participás en la cantidad máxima de ligas activas.',
   WRONG_LEAGUE_PASSWORD: 'La contraseña no es correcta. Revisala y volvé a confirmar.',
-  INVALID_SQUAD_PLAYERS:
-    'Algún jugador elegido ya no está disponible. Volvé a armar tu escuadra.',
-  INVALID_SQUAD_BEHAVIORS:
-    'Algún comportamiento elegido ya no está disponible. Volvé a armar tu escuadra.',
+  INVALID_SQUAD:
+    'Algún jugador o comportamiento elegido ya no está disponible. Volvé a armar tu escuadra.',
 }
-
-const SQUAD_ERRORS = ['INVALID_SQUAD_PLAYERS', 'INVALID_SQUAD_BEHAVIORS']
 
 function error_message(error, fallback) {
   if (!error?.status) return 'No se pudo contactar al servidor.'
   return ERROR_MESSAGES[error.error_code] ?? fallback
 }
 
-// Uses the /join error codes, so the page and the join notice share one message.
 function join_block(league) {
   if (league.isEnrolled) return 'ENROLLED'
   if (!OPEN_LEAGUE_STATUSES.includes(league.status)) return 'LEAGUE_NOT_OPEN'
@@ -49,7 +46,7 @@ function join_block(league) {
 function join_notice(error) {
   const code = error?.status ? error.error_code : null
 
-  if (SQUAD_ERRORS.includes(code)) {
+  if (code === 'INVALID_SQUAD') {
     return { kind: 'squad', title: 'Escuadra no válida', message: ERROR_MESSAGES[code] }
   }
   if (code === 'WRONG_LEAGUE_PASSWORD') {
@@ -141,6 +138,12 @@ export default function JoinLeaguePage() {
   const [password, set_password] = useState('')
   const password_ref = useRef(null)
 
+  const refresh_league = useCallback((listed) => {
+    set_league((current) => apply_league_list(current, listed))
+  }, [])
+
+  useLeaguesSocket('', refresh_league)
+
   useEffect(() => {
     if (!read_session()) {
       navigate('/login', { replace: true })
@@ -200,13 +203,14 @@ export default function JoinLeaguePage() {
 
   const is_complete = is_squad_complete(squad)
   const needs_password = Boolean(league?.isPrivate)
-  // League passwords cannot contain spaces, so edge spaces can only come from pasting.
+  // Passwords cannot contain spaces.
   const clean_password = password.trim()
   const can_confirm = is_complete && (!needs_password || clean_password !== '')
 
   async function confirm() {
     if (!can_confirm || submitting) return
 
+    const enrolled_before = league.enrolledClubs
     set_submitting(true)
 
     try {
@@ -216,7 +220,8 @@ export default function JoinLeaguePage() {
       })
       set_league((current) => ({
         ...current,
-        enrolledClubs: current.enrolledClubs + 1,
+        // The list may already count this join.
+        enrolledClubs: Math.max(current.enrolledClubs, enrolled_before + 1),
         isEnrolled: true,
         mySquad: squad_entries(squad, players, behaviors),
       }))
@@ -235,7 +240,8 @@ export default function JoinLeaguePage() {
     }
   }
 
-  const block = league ? (join_block(league) ?? closed_reason) : null
+  // The own join may take the last spot while confirming.
+  const block = league && !submitting ? (join_block(league) ?? closed_reason) : null
 
   return (
     <div className="home-page">
