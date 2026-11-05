@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import BehaviorEditorPage from '../src/pages/behavior_editor_page.jsx'
 import * as api from '../src/api/behaviors.js'
+import { ApiError } from '../src/api/client.js'
 
 vi.mock ('../src/api/behaviors.js', () => ({
   get_behavior: vi.fn(),
@@ -171,5 +172,29 @@ describe('BehaviorEditorPage', () => {
     })
     expect(api.create_behavior).toHaveBeenCalledTimes(1)
     expect(api.update_behavior).not.toHaveBeenCalled()
+  })
+  it('Debe mostrar mensaje de error si recibe un error 422 de la API', async () => {
+    const error_message_be = "El uso de 'eval' no está permitido en el código del comportamiento."
+    api.create_behavior.mockRejectedValue(new ApiError(422, error_message_be))
+    render(
+      <MemoryRouter initialEntries={['/behaviors/create']}>
+        <Routes>
+          <Route path="/behaviors/create" element={<BehaviorEditorPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+    const inputName = screen.getByPlaceholderText('Ej: Presión alta')
+    fireEvent.change(inputName, { target: { value: 'Nuevo Comportamiento' } })
+    const editor = screen.getByLabelText('Editor de código Python')
+    fireEvent.change(editor, { target: { value: 'print("Nuevo comportamiento")' } })
+    const submitButton = screen.getByText('+ Crear comportamiento')
+    fireEvent.click(submitButton)
+    await waitFor(() => {
+      expect(api.create_behavior).toHaveBeenCalled()
+      expect(screen.getByText(error_message_be)).toBeInTheDocument()
+    })
+    expect(screen.getByPlaceholderText('Ej: Presión alta')).toHaveValue('Nuevo Comportamiento')
+    expect(screen.getByLabelText('Editor de código Python')).toHaveValue('print("Nuevo comportamiento")')
+  
   })
 })
