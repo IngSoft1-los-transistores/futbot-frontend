@@ -51,12 +51,21 @@ const detail = (overrides = {}) => ({
   ...overrides,
 })
 
+let listed_leagues
+
 test.beforeEach(async ({ page }) => {
+  listed_leagues = []
   await page.route('**/api/auth/me', (route) =>
     route.fulfill({ json: { user_id: 'test-user', club_id: session.club_id } })
   )
   await page.route('**/api/players', (route) => route.fulfill({ json: players }))
   await page.route('**/api/behaviors', (route) => route.fulfill({ json: behaviors }))
+  await page.routeWebSocket(/\/ws\/leagues$/, (ws) => {
+    ws.onMessage((raw) => {
+      if (JSON.parse(String(raw)).type !== 'auth') return
+      ws.send(JSON.stringify({ type: 'leagues', name: '', leagues: listed_leagues }))
+    })
+  })
 })
 
 async function seed_session(page) {
@@ -108,15 +117,10 @@ async function fill_team(page) {
 const confirm_button = (page) => page.getByRole('button', { name: 'Confirmar inscripción' })
 
 test('the league list leads to the join page of the selected league', async ({ page }) => {
-  // Same shape as GET /api/leagues (ListLeagueResponse).
-  await page.route('**/api/leagues', (route) =>
-    route.fulfill({
-      json: [
-        { id: 'otra-liga', name: 'Copa Sur', participantsCount: 2, started: false, isPrivate: false },
-        { id: LEAGUE_ID, name: 'Liga del Barrio', participantsCount: 5, started: false, isPrivate: false },
-      ],
-    })
-  )
+  listed_leagues = [
+    { id: 'otra-liga', name: 'Copa Sur', participantsCount: 2, started: false, isPrivate: false },
+    { id: LEAGUE_ID, name: 'Liga del Barrio', participantsCount: 5, started: false, isPrivate: false },
+  ]
   await mock_detail(page, detail())
   await seed_session(page)
   await page.goto('/leagues')
