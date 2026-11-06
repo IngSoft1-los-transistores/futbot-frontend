@@ -94,9 +94,23 @@ describe("CreateLeagueForm", () => {
     const sent = createLeague.mock.calls[0][0];
     expect(sent.name).toBe("Liga de prueba");
     expect(sent.is_private).toBe(false);
+    expect(sent.has_penalty_shootout).toBe(false);
     expect(sent.starters).toHaveLength(3);
     expect(sent.substitutes).toHaveLength(3);
     expect(sent.starters[0]).toEqual({ playerId: "messi", behaviorId: "1" });
+  });
+
+  it("envía has_penalty_shootout como true cuando se activa la definición por penales", async () => {
+    const user = userEvent.setup();
+    render(<CreateLeagueForm onCancel={vi.fn()} />);
+
+    await fill_fields(user);
+    await fill_squad(user);
+    await user.click(screen.getByLabelText(/definición por penales/i));
+    await user.click(submit_button());
+
+    expect(await screen.findByText(/liga creada correctamente/i)).not.toBeNull();
+    expect(createLeague.mock.calls[0][0].has_penalty_shootout).toBe(true);
   });
 
   it("muestra el error del backend y no muestra el éxito", async () => {

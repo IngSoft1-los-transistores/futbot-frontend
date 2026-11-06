@@ -31,6 +31,7 @@ async function seed_session(page) {
 // Mockea GET /api/leagues filtrando por `name` como el backend, y registra los pedidos
 async function mock_leagues(page, all = leagues) {
   const requests = []
+  await page.route('**/api/leagues/*/standings', (route) => route.fulfill({ json: [] }))
   await page.route(LEAGUES_URL, async (route) => {
     const request = route.request()
     const url = new URL(request.url())

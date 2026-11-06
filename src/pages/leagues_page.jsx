@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { list_leagues } from '../api/client'
 import { read_session } from '../auth/session'
+import LeagueStandingsTable from '../components/LeagueStandingsTable'
 import './Home.css'
 import './leagues_page.css'
 
@@ -120,6 +121,7 @@ export default function LeaguesPage() {
               </p>
             {/* TICKET "UNIRSE A LIGA": el botón para continuar va acá, usando `selected` */}
             <button className="home-action" onClick={() => set_selected(null)}>Quitar selección</button>
+            <LeagueStandingsTable leagueId={selected.id} />
           </section>
         )}
 
