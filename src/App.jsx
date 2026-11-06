@@ -1,5 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Login from './pages/Login'
+import CheckEmailPage from './pages/check_email_page'
+import VerifyEmailPage from './pages/verify_email_page'
 import Home from './pages/Home'
 import Match from './pages/Match'
 import RegisterPage from './pages/register_page'
@@ -75,6 +77,8 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/check-email" element={<CheckEmailPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/register" element={<Registration />} />
         <Route path="/auth/register" element={<Navigate to="/register" replace />} />
         <Route path="/auth/login" element={<Navigate to="/login" replace />} />
