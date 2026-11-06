@@ -1,3 +1,5 @@
+import { request } from './client'
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const registerUser = async (payload) => {
@@ -21,3 +23,19 @@ export const registerUser = async (payload) => {
 
   return response.json();
 };
+
+export function verifyEmail(token) {
+  return request('/api/auth/verify-email', {
+    authenticated: false,
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  })
+}
+
+export function resendVerification(email) {
+  return request('/api/auth/resend-verification', {
+    authenticated: false,
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
