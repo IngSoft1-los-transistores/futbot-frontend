@@ -1,5 +1,3 @@
-// Provisional field size: the API documents a centered origin but no dimensions.
-// Keep the conversion here until the engine's field dimensions are confirmed.
 const FIELD_WIDTH = 100
 const FIELD_HEIGHT = 60
 const project = ({ x, y }) => ({
