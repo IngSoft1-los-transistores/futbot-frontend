@@ -105,7 +105,8 @@ export default function Home() {
 
   function join_private_league(league) {
     set_private_league_open(false)
-    navigate(`/ligas/${encodeURIComponent(league.leagueId)}/unirse`)
+    const league_id = encodeURIComponent(league.leagueId)
+    navigate(league.isEnrolled ? `/league/${league_id}/waiting` : `/ligas/${league_id}/unirse`)
   }
 
   return (

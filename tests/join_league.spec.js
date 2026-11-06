@@ -116,6 +116,12 @@ async function fill_team(page) {
 
 const confirm_button = (page) => page.getByRole('button', { name: 'Confirmar inscripción' })
 
+const lobby_navigation = (page) =>
+  page.waitForEvent('framenavigated', {
+    predicate: (frame) =>
+      frame === page.mainFrame() && new URL(frame.url()).pathname === `/league/${LEAGUE_ID}/waiting`,
+  })
+
 test('the league list leads to the join page of the selected league', async ({ page }) => {
   listed_leagues = [
     { id: 'otra-liga', name: 'Copa Sur', participantsCount: 2, started: false, isPrivate: false },
@@ -137,7 +143,7 @@ test('the league list leads to the join page of the selected league', async ({ p
   await expect(page.getByRole('heading', { name: 'Liga del Barrio' })).toBeVisible()
 })
 
-test('joining sends the POST with the token and the squad, then locks it', async ({ page }) => {
+test('joining sends the POST with the token and the squad, then goes to the lobby', async ({ page }) => {
   await mock_detail(page, detail())
   const requests = await mock_join(page, 200, {
     enrollmentId: 'enrollment-1',
@@ -149,9 +155,10 @@ test('joining sends the POST with the token and the squad, then locks it', async
 
   await expect(confirm_button(page)).toBeDisabled()
   await fill_team(page)
+  const to_lobby = lobby_navigation(page)
   await confirm_button(page).click()
 
-  await expect(page.getByRole('dialog', { name: '¡Te uniste a la liga!' })).toBeVisible()
+  await to_lobby
   expect(requests).toHaveLength(1)
   expect(requests[0].method).toBe('POST')
   expect(requests[0].url).toMatch(new RegExp(`/api/leagues/${LEAGUE_ID}/join$`))
@@ -160,12 +167,6 @@ test('joining sends the POST with the token and the squad, then locks it', async
     titulares: selection_of(starters),
     suplentes: selection_of(substitutes),
   })
-
-  await page.getByRole('button', { name: 'Aceptar' }).click()
-  await expect(page.getByRole('region', { name: 'Tu escuadra' })).toContainText('Fito')
-  await expect(page.getByText('2 de 8')).toBeVisible()
-  await expect(page.locator('.slot-card')).toHaveCount(0)
-  await expect(confirm_button(page)).toHaveCount(0)
 })
 
 test('a private league asks for its password and lets the user fix a wrong one', async ({ page }) => {
@@ -193,9 +194,10 @@ test('a private league asks for its password and lets the user fix a wrong one',
   await expect(password_field).toBeFocused()
 
   await password_field.fill('secreta')
+  const to_lobby = lobby_navigation(page)
   await confirm_button(page).click()
 
-  await expect(page.getByRole('dialog', { name: '¡Te uniste a la liga!' })).toBeVisible()
+  await to_lobby
   expect(passwords).toEqual(['otra', 'secreta'])
 })
 
@@ -224,18 +226,14 @@ test('LEAGUE_FULL on confirm informs that the league is complete', async ({ page
   await expect(page).toHaveURL('/home')
 })
 
-test('an enrolled club sees its squad read only', async ({ page }) => {
-  await mock_detail(page, detail({
-    isEnrolled: true,
-    mySquad: [
-      { playerId: 'player-ana', name: 'Ana', role: 'starter', behaviorId: 'behavior-front', behaviorName: 'Delantero' },
-    ],
-  }))
-  await open_join_page(page)
+test('an enrolled club goes straight to the lobby', async ({ page }) => {
+  await mock_detail(page, detail({ isEnrolled: true }))
+  await seed_session(page)
+  const to_lobby = lobby_navigation(page)
 
-  await expect(page.getByRole('region', { name: 'Tu escuadra' })).toContainText('Ana')
-  await expect(page.locator('.slot-card')).toHaveCount(0)
-  await expect(confirm_button(page)).toHaveCount(0)
+  await page.goto(JOIN_URL)
+
+  await to_lobby
 })
 
 test('a 401 on confirm clears the session and goes to the login', async ({ page }) => {

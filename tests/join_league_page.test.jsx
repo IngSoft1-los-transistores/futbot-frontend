@@ -1,7 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
 import JoinLeaguePage from '../src/pages/join_league_page'
 import { list_behaviors, list_players } from '../src/api/client'
 import { get_league, join_league } from '../src/api/leagues'
@@ -84,16 +84,28 @@ afterEach(() => {
   clear_session()
 })
 
-async function mount() {
+function render_page() {
   render(
     <MemoryRouter initialEntries={[`/ligas/${LEAGUE_ID}/unirse`]}>
       <Routes>
         <Route path="/ligas/:league_id/unirse" element={<JoinLeaguePage />} />
+        <Route path="/league/:league_id/waiting" element={<LobbyStub />} />
         <Route path="/home" element={<p>Menú principal</p>} />
         <Route path="/login" element={<p>Pantalla de login</p>} />
       </Routes>
     </MemoryRouter>
   )
+}
+
+function LobbyStub() {
+  const { league_id } = useParams()
+  return <p>Lobby de {league_id}</p>
+}
+
+const lobby_text = `Lobby de ${LEAGUE_ID}`
+
+async function mount() {
+  render_page()
   await screen.findByRole('heading', { name: 'Liga del Barrio' })
   return userEvent.setup()
 }
@@ -218,24 +230,12 @@ describe('leagues that cannot be joined', () => {
     expect(screen.getByRole('button', { name: 'Volver al menú' })).toBeInTheDocument()
   })
 
-  it('shows the confirmed squad, read only, when the club is already enrolled', async () => {
-    get_league.mockResolvedValue(
-      league({
-        isEnrolled: true,
-        mySquad: [
-          { playerId: 'player-1', name: 'Ana', role: 'starter', behaviorId: 'behavior-1', behaviorName: 'Delantero' },
-          { playerId: 'player-4', name: 'Dani', role: 'substitute', behaviorId: 'behavior-2', behaviorName: 'Defensa' },
-        ],
-      })
-    )
-    await mount()
+  it('goes straight to the lobby when the club is already enrolled', async () => {
+    get_league.mockResolvedValue(league({ isEnrolled: true }))
+    render_page()
 
-    const squad = screen.getByRole('region', { name: 'Tu escuadra' })
-    expect(within(squad).getByText(/Tu escuadra quedó confirmada y no puede modificarse/)).toBeInTheDocument()
-    expect(within(squad).getByText('Ana')).toBeInTheDocument()
-    expect(within(squad).getByText('Defensa')).toBeInTheDocument()
+    expect(await screen.findByText(lobby_text)).toBeInTheDocument()
     expect(screen.queryAllByRole('combobox')).toHaveLength(0)
-    expect(screen.queryByRole('button', { name: 'Confirmar inscripción' })).not.toBeInTheDocument()
   })
 })
 
@@ -280,7 +280,7 @@ describe('private leagues', () => {
       substitutes: [chosen(3), chosen(4), chosen(5)],
       password: 'secreta',
     })
-    expect(await screen.findByRole('dialog', { name: '¡Te uniste a la liga!' })).toBeInTheDocument()
+    expect(await screen.findByText(lobby_text)).toBeInTheDocument()
   })
 
   it('a wrong password keeps the squad and puts the cursor back on the field', async () => {
@@ -304,7 +304,7 @@ describe('private leagues', () => {
 })
 
 describe('confirming', () => {
-  it('joins with the selected squad and then locks it', async () => {
+  it('joins with the selected squad and goes to the lobby', async () => {
     join_league.mockResolvedValue({ enrollmentId: 'e-1', clubId: 'club', leagueId: LEAGUE_ID })
     const user = await mount()
 
@@ -315,15 +315,8 @@ describe('confirming', () => {
       starters: [chosen(0), chosen(1), chosen(2)],
       substitutes: [chosen(3), chosen(4), chosen(5)],
     })
-    expect(await screen.findByRole('dialog', { name: '¡Te uniste a la liga!' })).toBeInTheDocument()
-
-    const squad = screen.getByRole('region', { name: 'Tu escuadra' })
-    expect(within(squad).getByText('Ana')).toBeInTheDocument()
-    expect(within(squad).getByText('Fito')).toBeInTheDocument()
-    expect(screen.queryAllByRole('combobox')).toHaveLength(0)
-    expect(screen.queryByRole('button', { name: 'Confirmar inscripción' })).not.toBeInTheDocument()
-
-    expect(screen.getByText('2 de 8')).toBeInTheDocument()
+    expect(await screen.findByText(lobby_text)).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('locks the squad and the button while the request is in flight', async () => {
@@ -338,7 +331,7 @@ describe('confirming', () => {
     screen.getAllByRole('combobox').forEach((select) => expect(select).toBeDisabled())
 
     respond({})
-    expect(await screen.findByRole('dialog', { name: '¡Te uniste a la liga!' })).toBeInTheDocument()
+    expect(await screen.findByText(lobby_text)).toBeInTheDocument()
   })
 
   it('reports that the league is full and stops offering the selector', async () => {
@@ -464,49 +457,8 @@ describe('live league data', () => {
 
     await act(async () => respond({}))
 
-    expect(screen.getByRole('dialog', { name: '¡Te uniste a la liga!' })).toBeInTheDocument()
-    expect(screen.queryByText(/La liga está completa/)).not.toBeInTheDocument()
-    expect(screen.getByText('0 de 8')).toBeInTheDocument()
-  })
-
-  it('counts the own join once when the list arrives before the response', async () => {
-    let respond
-    join_league.mockReturnValue(new Promise((resolve) => { respond = resolve }))
-    const user = await mount()
-
-    await fill_squad(user)
-    await user.click(confirm_button())
-    receive_list(listed_league(6))
-    await act(async () => respond({}))
-
-    expect(screen.getByText('2 de 8')).toBeInTheDocument()
-  })
-
-  it('counts the own join once when the list arrives after the response', async () => {
-    join_league.mockResolvedValue({})
-    const user = await mount()
-
-    await fill_squad(user)
-    await user.click(confirm_button())
-    await screen.findByRole('dialog', { name: '¡Te uniste a la liga!' })
-    expect(screen.getByText('2 de 8')).toBeInTheDocument()
-
-    receive_list(listed_league(6))
-
-    expect(screen.getByText('2 de 8')).toBeInTheDocument()
-  })
-
-  it('also counts another club that joined during the own join', async () => {
-    let respond
-    join_league.mockReturnValue(new Promise((resolve) => { respond = resolve }))
-    const user = await mount()
-
-    await fill_squad(user)
-    await user.click(confirm_button())
-    receive_list(listed_league(7))
-    await act(async () => respond({}))
-
-    expect(screen.getByText('1 de 8')).toBeInTheDocument()
+    expect(screen.getByText(lobby_text)).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('reports the league as full when another club took the last spot during the join', async () => {
@@ -525,19 +477,5 @@ describe('live league data', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('La liga está completa')
     expect(screen.queryAllByRole('combobox')).toHaveLength(0)
-  })
-
-  it('keeps showing the confirmed squad after later lists', async () => {
-    join_league.mockResolvedValue({})
-    const user = await mount()
-
-    await fill_squad(user)
-    await user.click(confirm_button())
-    await screen.findByRole('dialog', { name: '¡Te uniste a la liga!' })
-
-    receive_list(listed_league(8, { started: true }))
-
-    expect(screen.getByRole('region', { name: 'Tu escuadra' })).toBeInTheDocument()
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

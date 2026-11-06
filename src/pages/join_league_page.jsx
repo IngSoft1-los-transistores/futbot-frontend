@@ -12,9 +12,8 @@ import {
 } from '../api/leagues'
 import { read_session } from '../auth/session'
 import Modal from '../components/modal'
-import PlayerRow from '../components/molecules/player_row'
 import SquadSelector from '../components/SquadSelector'
-import { empty_squad, is_squad_complete, squad_entries } from '../components/squad'
+import { empty_squad, is_squad_complete } from '../components/squad'
 import { useLeaguesSocket } from '../hooks/use_leagues_socket'
 import './Home.css'
 import './join_friendly.css'
@@ -36,8 +35,9 @@ function error_message(error, fallback) {
   return ERROR_MESSAGES[error.error_code] ?? fallback
 }
 
+const lobby_path = (league_id) => `/league/${encodeURIComponent(league_id)}/waiting`
+
 function join_block(league) {
-  if (league.isEnrolled) return 'ENROLLED'
   if (!OPEN_LEAGUE_STATUSES.includes(league.status)) return 'LEAGUE_NOT_OPEN'
   if (is_league_full(league)) return 'LEAGUE_FULL'
   return null
@@ -97,30 +97,6 @@ function LeagueFacts({ league }) {
   )
 }
 
-function ConfirmedSquad({ squad }) {
-  return (
-    <section className="join-panel" aria-labelledby="league-squad-title">
-      <h2 id="league-squad-title">Tu escuadra</h2>
-      <p role="status">
-        Ya estás inscripto en esta liga. Tu escuadra quedó confirmada y no puede
-        modificarse.
-      </p>
-      {squad?.length > 0 && (
-        <ol className="join-list">
-          {squad.map((player, index) => (
-            <PlayerRow
-              key={player.playerId}
-              number={index + 1}
-              player={player}
-              side="home"
-            />
-          ))}
-        </ol>
-      )}
-    </section>
-  )
-}
-
 export default function JoinLeaguePage() {
   const navigate = useNavigate()
   const { league_id } = useParams()
@@ -168,6 +144,10 @@ export default function JoinLeaguePage() {
     ])
       .then(([loaded_league, loaded_players, loaded_behaviors]) => {
         if (signal.aborted) return
+        if (loaded_league.isEnrolled) {
+          navigate(lobby_path(league_id), { replace: true })
+          return
+        }
         set_league(loaded_league)
         set_players(loaded_players)
         set_behaviors(loaded_behaviors)
@@ -180,7 +160,7 @@ export default function JoinLeaguePage() {
       })
 
     return () => controller.abort()
-  }, [league_id, attempt])
+  }, [league_id, attempt, navigate])
 
   const go_home = () => navigate('/home')
 
@@ -210,7 +190,6 @@ export default function JoinLeaguePage() {
   async function confirm() {
     if (!can_confirm || submitting) return
 
-    const enrolled_before = league.enrolledClubs
     set_submitting(true)
 
     try {
@@ -218,18 +197,7 @@ export default function JoinLeaguePage() {
         ...squad,
         password: needs_password ? clean_password : undefined,
       })
-      set_league((current) => ({
-        ...current,
-        // The list may already count this join.
-        enrolledClubs: Math.max(current.enrolledClubs, enrolled_before + 1),
-        isEnrolled: true,
-        mySquad: squad_entries(squad, players, behaviors),
-      }))
-      set_notice({
-        kind: 'success',
-        title: '¡Te uniste a la liga!',
-        message: `Tu club quedó inscripto en ${league.name}. Tu escuadra quedó confirmada y ya no puede modificarse.`,
-      })
+      navigate(lobby_path(league_id), { replace: true })
     } catch (cause) {
       if (cause.name === 'AbortError' || cause.status === 401) return
       const next_notice = join_notice(cause)
@@ -283,16 +251,7 @@ export default function JoinLeaguePage() {
           <>
             <LeagueFacts league={league} />
 
-            {block === 'ENROLLED' && (
-              <>
-                <ConfirmedSquad squad={league.mySquad} />
-                <button className="home-action" onClick={go_home}>
-                  Volver al menú
-                </button>
-              </>
-            )}
-
-            {block && block !== 'ENROLLED' && (
+            {block && (
               <>
                 <p className="home-notice" role="alert">
                   {ERROR_MESSAGES[block]}
@@ -400,10 +359,10 @@ export default function JoinLeaguePage() {
             )}
             {notice.kind !== 'squad' && notice.kind !== 'password' && (
               <button className="home-action" onClick={() => set_notice(null)}>
-                {notice.kind === 'success' ? 'Aceptar' : 'Cerrar'}
+                Cerrar
               </button>
             )}
-            {(notice.kind === 'success' || notice.kind === 'closed') && (
+            {notice.kind === 'closed' && (
               <button className="home-action" onClick={go_home}>
                 Volver al menú
               </button>

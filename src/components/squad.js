@@ -20,22 +20,3 @@ export function is_squad_complete(squad) {
     new Set(slots.map((slot) => String(slot.playerId))).size === slots.length
   )
 }
-
-export function squad_entries(squad, players, behaviors) {
-  const name_of = (items, id) =>
-    items.find((item) => String(item.id) === String(id))?.name ?? ''
-
-  const entries = (slots, role) =>
-    slots.map((slot) => ({
-      playerId: String(slot.playerId),
-      name: name_of(players, slot.playerId),
-      role,
-      behaviorId: String(slot.behaviorId),
-      behaviorName: name_of(behaviors, slot.behaviorId),
-    }))
-
-  return [
-    ...entries(squad.starters, 'starter'),
-    ...entries(squad.substitutes, 'substitute'),
-  ]
-}

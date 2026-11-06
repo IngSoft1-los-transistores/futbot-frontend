@@ -77,6 +77,11 @@ async function mock_by_code(page, fulfill) {
   return requests
 }
 
+const lobby_navigation = (page) =>
+  page.waitForEvent('framenavigated', {
+    predicate: (frame) => new URL(frame.url()).pathname === `/league/${LEAGUE_ID}/waiting`,
+  })
+
 async function fill_team(page) {
   const selects = page.locator('.slot-card').getByRole('combobox')
   for (let index = 0; index < players.length; index += 1) {
@@ -115,9 +120,10 @@ test('joining a private league goes from the code to the password and the squad'
   const confirm = page.getByRole('button', { name: 'Confirmar inscripción' })
   await expect(confirm).toBeDisabled()
   await page.getByLabel('Contraseña de la liga').fill('secreta')
+  const to_lobby = lobby_navigation(page)
   await confirm.click()
 
-  await expect(page.getByRole('dialog', { name: '¡Te uniste a la liga!' })).toBeVisible()
+  await to_lobby
   expect(joins).toHaveLength(1)
   expect(joins[0].url).toMatch(new RegExp(`/api/leagues/${LEAGUE_ID}/join$`))
   expect(joins[0].authorization).toBe(`Bearer ${session.access_token}`)
@@ -126,6 +132,23 @@ test('joining a private league goes from the code to the password and the squad'
     suplentes: selection_of(players.slice(3)),
     password: 'secreta',
   })
+})
+
+test('an enrolled club goes from the code straight to the lobby', async ({ page }) => {
+  await mock_by_code(page, () => ({ json: { ...private_league, isEnrolled: true } }))
+  const details = []
+  await page.route('**/api/leagues/*', (route) => {
+    details.push(route.request().url())
+    return route.fulfill({ json: private_league })
+  })
+  const modal = await open_modal(page)
+
+  await modal.getByLabel('Código de la liga').fill(CODE)
+  const to_lobby = lobby_navigation(page)
+  await modal.getByRole('button', { name: 'Buscar liga' }).click()
+
+  await to_lobby
+  expect(details).toHaveLength(0)
 })
 
 test('an unknown code is reported in the modal and another one can be entered', async ({ page }) => {

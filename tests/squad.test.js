@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { empty_squad, is_squad_complete, squad_entries } from '../src/components/squad'
+import { empty_squad, is_squad_complete } from '../src/components/squad'
 
 const slot = (playerId, behaviorId = 'behavior-1') => ({ playerId, behaviorId })
 
@@ -54,39 +54,5 @@ describe('is_squad_complete', () => {
     squad.substitutes[0] = slot('player-1')
 
     expect(is_squad_complete(squad)).toBe(false)
-  })
-})
-
-describe('squad_entries', () => {
-  it('builds the six entries with role and names, starters first', () => {
-    const players = Array.from({ length: 6 }, (_, index) => ({
-      id: `player-${index + 1}`,
-      name: `Jugador ${index + 1}`,
-    }))
-    const behaviors = [
-      { id: 'behavior-1', name: 'Delantero' },
-      { id: 'behavior-2', name: 'Defensa' },
-    ]
-
-    const entries = squad_entries(full_squad(), players, behaviors)
-
-    expect(entries).toHaveLength(6)
-    expect(entries[0]).toEqual({
-      playerId: 'player-1',
-      name: 'Jugador 1',
-      role: 'starter',
-      behaviorId: 'behavior-1',
-      behaviorName: 'Delantero',
-    })
-    expect(entries[5]).toEqual({
-      playerId: 'player-6',
-      name: 'Jugador 6',
-      role: 'substitute',
-      behaviorId: 'behavior-2',
-      behaviorName: 'Defensa',
-    })
-    expect(entries.map((entry) => entry.role)).toEqual([
-      'starter', 'starter', 'starter', 'substitute', 'substitute', 'substitute',
-    ])
   })
 })

@@ -111,7 +111,7 @@ test('a league that starts stops accepting clubs without reloading', async ({ pa
   await expect(page.locator('.slot-card')).toHaveCount(0)
 })
 
-test('the own join counts once when the list arrives before the response', async ({ page }) => {
+test('taking the last spot goes to the lobby without reporting a full league', async ({ page }) => {
   const socket = await mock_leagues_socket(page, [listed(7)])
   await open_join_page(page, detail({ enrolledClubs: 7 }))
   await page.route('**/api/leagues/*/join', async (route) => {
@@ -124,11 +124,10 @@ test('the own join counts once when the list arrives before the response', async
   })
 
   await fill_team(page)
+  const to_lobby = page.waitForEvent('framenavigated', {
+    predicate: (frame) => new URL(frame.url()).pathname === `/league/${LEAGUE_ID}/waiting`,
+  })
   await page.getByRole('button', { name: 'Confirmar inscripción' }).click()
 
-  await expect(page.getByRole('dialog', { name: '¡Te uniste a la liga!' })).toBeVisible()
-  await expect(page.getByRole('dialog', { name: 'Liga completa' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Aceptar' }).click()
-  await expect(page.getByRole('region', { name: 'Tu escuadra' })).toContainText('Fito')
-  await expect(page.getByText('0 de 8')).toBeVisible()
+  await to_lobby
 })
