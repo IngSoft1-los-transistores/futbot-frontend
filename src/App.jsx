@@ -11,6 +11,7 @@ import './App.css'
 import JoinFriendly from './pages/join_friendly'
 import LeaguesPage from './pages/leagues_page'
 import BehaviorEditorPage from './pages/behavior_editor_page'
+import FriendlyListPage from './pages/friendly_list_page'
 
 
 const Navbar = () => (
@@ -84,6 +85,7 @@ export default function App() {
         <Route path="/matches/:match_id" element={<Match />} />
         <Route path="/home" element={<Home />} />
         <Route path="/friendly/join" element={<JoinFriendly />} />
+        <Route path="/friendly" element={<FriendlyListPage />} />
         <Route path="/amistosos/:room_id/sala" element={<DashboardLayout><FriendlyRoomPage /></DashboardLayout>} />
         <Route path="/partidos/:match_id" element={<Match />} />
         <Route path="/leagues" element={<LeaguesPage />} />

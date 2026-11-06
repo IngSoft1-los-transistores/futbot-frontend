@@ -163,7 +163,6 @@ export async function list_behaviors(options = {}) {
 // Conservamos el contrato actual: titulares, suplentes, playerId y behaviorId.
 export function join_friendly_room({
   room_id,
-  code,
   starters,
   substitutes,
 }) {
@@ -177,10 +176,35 @@ export function join_friendly_room({
     {
       method: 'POST',
       body: JSON.stringify({
-        code,
         titulares: starters.map(to_payload),
         suplentes: substitutes.map(to_payload),
       }),
     }
   )
+}
+
+// El servidor guarda en UTC; si la fecha llega sin zona horaria, se le agrega "Z"
+// (si no, el navegador la interpretaría como hora local).
+function parse_utc(value) {
+  if (typeof value !== 'string') return null
+  const has_zone = /(Z|[+-]\d{2}:?\d{2})$/i.test(value)
+  const date = new Date(has_zone ? value : `${value}Z`)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+// Deja de cada sala solo lo que usa la pantalla
+function normalize_public_room(raw) {
+  return {
+    id: raw.roomId ?? raw.room_id,
+    status: raw.status,
+    home_club_id: raw.homeClub ?? raw.home_club,
+    home_club_name: raw.homeClubName ?? raw.home_club_name ?? '',
+    created_at: parse_utc(raw.createdAt ?? raw.created_at),
+  }
+}
+
+// Amistosos públicos en espera de rival (sin las salas del propio club)
+export async function list_public_friendly_rooms(options = {}) {
+  const body = await request('/api/friendly/rooms/public', options)
+  return as_list(body, 'rooms').map(normalize_public_room)
 }

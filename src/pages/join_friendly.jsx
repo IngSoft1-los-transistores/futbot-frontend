@@ -6,7 +6,6 @@ import {
   list_players,
 } from '../api/client'
 import { read_session } from '../auth/session'
-import JoinFriendlyModal from '../components/join_friendly_modal'
 import SquadSelector from '../components/SquadSelector'
 import './Home.css'
 import './join_friendly.css'
@@ -24,7 +23,7 @@ const EMPTY_SQUAD = () => ({
 
 const ERROR_MESSAGES = {
   UNAUTHORIZED: 'Tu sesión no es válida o venció. Iniciá sesión nuevamente.',
-  ROOM_NOT_FOUND: 'La sala no existe o el ID no es válido.',
+  ROOM_NOT_FOUND: 'La sala ya no existe',
   MATCH_ALREADY_STARTED: 'El partido ya fue iniciado y no admite nuevos participantes.',
   INVALID_SQUAD:
     'La selección de jugadores o comportamientos no es válida. Revisá los seis puestos.',
@@ -69,11 +68,11 @@ export default function JoinFriendly() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [room, set_room] = useState(() =>
+  const [room] = useState(() =>
     location.state?.room_id
       ? {
           room_id: location.state.room_id,
-          code: location.state.code,
+          home_club_name: location.state.home_club_name ?? '',
         }
       : null
   )
@@ -98,7 +97,7 @@ export default function JoinFriendly() {
     }
 
     if (!has_room) {
-      navigate('/home', { replace: true })
+      navigate('/friendly', { replace: true })
       return
     }
 
@@ -270,7 +269,6 @@ export default function JoinFriendly() {
 
   const payload = {
     room_id: room.room_id,
-    code: room.code,
     starters: squad.starters.map((slot) => ({
       player_id: String(slot.playerId),
       behavior_id: String(slot.behaviorId),
@@ -284,7 +282,6 @@ export default function JoinFriendly() {
   try {
     console.debug('Enviando equipo para unirse al amistoso:', {
       room_id: payload.room_id,
-      has_code: Boolean(payload.code),
       starters: payload.starters,
       substitutes: payload.substitutes,
     })
@@ -313,17 +310,6 @@ export default function JoinFriendly() {
     set_attempt((current) => current + 1)
   }
 
-  function enter_other_code() {
-    set_notice(null)
-    set_change_open(true)
-  }
-
-  function change_room({ room_id, code }) {
-    set_room({ room_id, code })
-    set_change_open(false)
-    set_notice(null)
-  }
-
   function retry_load() {
     set_load_error('')
     set_load_status('loading')
@@ -335,21 +321,11 @@ export default function JoinFriendly() {
       <main className="home-content">
         <section className="home-welcome" aria-labelledby="join-title">
           <h1 id="join-title">Unirse a amistoso</h1>
-          <p>Sala: {room.room_id}</p>
+          <p>{room.home_club_name ? `Sala de ${room.home_club_name}` : `Sala: ${room.room_id}`}</p>
 
           <div className="join-row">
-            <button
-              className="home-action"
-              onClick={() => navigate('/home')}
-            >
-              Volver
-            </button>
-
-            <button
-              className="home-action"
-              onClick={() => set_change_open(true)}
-            >
-              Cambiar sala
+            <button className="home-action" onClick={() => navigate('/friendly')}>
+              Volver al listado
             </button>
           </div>
         </section>
@@ -425,12 +401,9 @@ export default function JoinFriendly() {
       </main>
 
       <NoticeDialog notice={notice}>
-        {notice?.kind === 'invalid_room' && (
-          <button
-            className="home-action"
-            onClick={enter_other_code}
-          >
-            Ingresar otra sala
+        {['invalid_room', 'full'].includes(notice?.kind) && (
+          <button className="home-action" onClick={() => navigate('/friendly')}>
+            Volver al listado
           </button>
         )}
 
@@ -451,22 +424,7 @@ export default function JoinFriendly() {
             Cerrar
           </button>
         )}
-
-        {['success', 'full', 'invalid_room'].includes(notice?.kind) && (
-          <button
-            className="home-action"
-            onClick={() => navigate('/home')}
-          >
-            Volver al menú
-          </button>
-        )}
       </NoticeDialog>
-
-      <JoinFriendlyModal
-        open={change_open}
-        on_close={() => set_change_open(false)}
-        on_submit={change_room}
-      />
     </div>
   )
 }
