@@ -21,6 +21,7 @@ const mount = () => render(<MemoryRouter initialEntries={['/matches/match-1']}><
   <Route path="/login" element={<p>Inicio de sesión</p>} />
 </Routes></MemoryRouter>)
 class Socket {
+  readyState = 1
   send = vi.fn()
   close = vi.fn()
   open() { this.onopen?.() }
@@ -195,5 +196,50 @@ describe('Estado del partido por WebSocket', () => {
     expect(sockets).toHaveLength(1)
     expect(sockets[0].onmessage).toBeNull()
     expect(sockets[0].close).toHaveBeenCalled()
+  })
+  
+  it('envía CHANGE_BEHAVIOR por el socket al confirmar el modal', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Ana'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
+    expect(sockets[0].send).toHaveBeenCalledWith(
+      JSON.stringify({ action: 'CHANGE_BEHAVIOR', payload: { playerId: 'p1', behaviorId: 'b2' } }),
+    )
+  })
+
+  it('un error tras CHANGE_BEHAVIOR no corta la vista del partido', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Ana'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
+    await emit(() => sockets[0].message({ type: 'error', status: 404, message: 'Comportamiento no disponible' }))
+    expect(sockets[0].close).not.toHaveBeenCalled()
+    expect(screen.queryByText('El partido no existe.')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Marcador: 0 a 0')).toBeInTheDocument()
+  })
+
+  it('cierra el modal y muestra un aviso de éxito al recibir el acuse', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Ana'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
+    await emit(() => sockets[0].message({ type: 'behavior_change_accepted', playerId: 'p1', behaviorId: 'b2' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Comportamiento actualizado')
+  })
+
+  it('muestra el error del servidor en un aviso y deja el modal abierto', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Ana'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
+    await emit(() => sockets[0].message({ type: 'error', status: 404, message: 'Comportamiento no disponible' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Comportamiento no disponible')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 })

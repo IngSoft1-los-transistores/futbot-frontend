@@ -4,6 +4,12 @@ import { retry_match_start } from '../api/matches'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import useMatchState from '../hooks/use_match_state'
 import MatchPitch from '../components/match_pitch'
+import { read_session } from '../auth/session'
+import ChangeBehaviorModal from '../components/change_behavior_modal'
+import { build_change_behavior_message } from '../match/change_behavior_message'
+import { get_my_starters } from '../match/my_starters'
+import Toast from '../components/toast'
+import { parse_change_result } from '../match/change_behavior_result'
 import './Match.css'
 
 const statuses = { in_progress: 'En juego', paused: 'En pausa', finished: 'Finalizado' }
@@ -92,15 +98,29 @@ function protocol_reducer(state, action) {
 
 function MatchView({ match_id, room_behavior_names }) {
   const [protocol_state, dispatch_protocol] = useReducer(protocol_reducer, protocol_initial_state)
+  const [behavior_list, set_behavior_list] = useState([])
+  const [change_open, set_change_open] = useState(false)
+  const [toast, set_toast] = useState(null)
+  const close_toast = useCallback(() => set_toast(null), [])
   const receive_protocol_message = useCallback((raw) => {
     if (raw?.type === 'connection') {
       dispatch_protocol({ type: 'connection', value: raw.value })
       return
     }
+    const change_result = parse_change_result(raw)
+    if (change_result) {
+      if (change_result.ok) {
+        set_change_open(false)
+        set_toast({ type: 'success', message: 'Comportamiento actualizado: rige desde el próximo tick' })
+      } else {
+        set_toast({ type: 'error', message: change_result.message })
+      }
+      return
+    }
     const message = parse_match_message(raw)
     if (message) dispatch_protocol({ type: 'message', message })
   }, [])
-  const { state, error, loading, waiting_for_start } = useMatchState(match_id, receive_protocol_message)
+  const { state, error, loading, waiting_for_start, send_message} = useMatchState(match_id, receive_protocol_message)
   const [retrying_start, set_retrying_start] = useState(false)
   const [start_error, set_start_error] = useState('')
 
@@ -125,14 +145,24 @@ function MatchView({ match_id, room_behavior_names }) {
     get_behaviors({ signal: controller.signal }).then((behaviors) => {
       if (controller.signal.aborted) return
       set_behavior_names(Object.fromEntries(behaviors.map(({ id, name }) => [id, name])))
+      set_behavior_list(behaviors)
     }).catch(() => {
       // El catálogo puede no incluir comportamientos privados del rival.
       // Su ausencia no debe interrumpir la transmisión del partido.
-      if (!controller.signal.aborted) set_behavior_names({})
+      if (!controller.signal.aborted) {
+        set_behavior_names({})
+        set_behavior_list([])
+      }
     })
+    
     return () => controller.abort()
   }, [has_state])
 
+  function confirm_changes(changes) {
+    changes.forEach(({ playerId, behaviorId }) => {
+      send_message(build_change_behavior_message(playerId, behaviorId))
+    })
+  }
   const behavior_name = (player) => player.behavior_name?.trim() || behavior_names[player.behavior_id] || room_behavior_names?.[player.behavior_id] || 'Nombre no disponible'
   const encounter = state ? `${state.home_club.name} vs. ${state.away_club.name}` : 'Estado del partido'
   return (
@@ -164,7 +194,21 @@ function MatchView({ match_id, room_behavior_names }) {
           <div className="match-clock"><span className={`match-status match-status--${state.status}`}>{statuses[state.status]}</span><time aria-label="Tiempo transcurrido">{time(state.current_time)}</time></div>
         </section>
         <MatchPitch state={state} protocol_state={protocol_state} />
-        <div className="match-pitch-footer"><Link to="/home">← Volver al menú</Link><span>Restante: <time>{time(state.remaining_time)}</time></span></div>
+        {change_open && (
+          <ChangeBehaviorModal
+            starters={get_my_starters(state, read_session()?.club_id)}
+            behaviors={behavior_list}
+            on_confirm={confirm_changes}
+            on_close={() => set_change_open(false)}
+          />
+        )}
+        <div className="match-pitch-footer"><Link to="/home">← Volver al menú</Link>
+        {state.status !== 'finished' && (
+          <button type="button" className="home-action" onClick={() => set_change_open(true)}>
+            Cambiar comportamiento
+          </button>
+        )}
+        <span>Restante: <time>{time(state.remaining_time)}</time></span></div>
         <details className="match-details">
           <summary>Jugadores y acciones del partido</summary>
         <div className="match-teams">
@@ -201,6 +245,7 @@ function MatchView({ match_id, room_behavior_names }) {
         </details>
       </>}
       </main>
+      {toast && <Toast type={toast.type} message={toast.message} on_close={close_toast} />}
     </div>
   )
 }
