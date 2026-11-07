@@ -54,7 +54,10 @@ export default function MiniPitchViewer({ player_id, behavior_id, onClose }) {
           <p>Estado: {connectionStatus}</p>
         </div>
 
-        <button type="button" onClick={onClose}>
+        <button 
+          type="button" 
+          className="mini-pitch-viewer__close"
+          onClick={onClose}>
           Cerrar prueba
         </button>
       </div>

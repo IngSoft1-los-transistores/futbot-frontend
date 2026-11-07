@@ -74,6 +74,7 @@ export default function SquadSelector({ players, behaviors, squad, setSquad, onP
           {/* Botón de vista previa */}
           <button
             type="button"
+            className="preview-button"
             disabled={!can_preview}
             onClick={() => onPreview(currentSlot)}
           >

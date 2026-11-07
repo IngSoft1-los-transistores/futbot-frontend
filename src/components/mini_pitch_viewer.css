@@ -44,3 +44,27 @@
   width: 100%;
   height: 100%;
 }
+
+.mini-pitch-viewer__close {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #c9973b;
+  border-radius: 5px;
+  background: transparent;
+  color: #c9973b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.mini-pitch-viewer__close:hover {
+  background: rgb(201 151 59 / 15%);
+}
+
+.mini-pitch-viewer__close:focus-visible {
+  outline: 2px solid #f1d48a;
+  outline-offset: 2px;
+}
