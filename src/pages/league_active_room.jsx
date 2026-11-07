@@ -1,0 +1,158 @@
+import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { read_session } from '../auth/session';
+import { use_league_lobby_socket } from '../hooks/use_league_live_socket';
+import './league_active_room.css'
+
+export default function OngoingLeagueLobbyView() {
+    const { league_id } = useParams();
+    const navigate = useNavigate();
+    const session = read_session();
+    const token = session?.token;
+    const user_club_id = session?.club_id;
+
+    const { lobby_data, loading, error, last_toast } = use_league_lobby_socket(league_id, token);
+
+    if (loading && !lobby_data) {
+        return (
+            <div className="lobby-view">
+                <div className="lobby-header skeleton" style={{ height: '80px' }} />
+                <div className="lobby-grid">
+                    <div className="match-card skeleton" style={{ height: '200px' }} />
+                    <div className="match-card skeleton" style={{ height: '200px' }} />
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return <div className="waiting-error">Error al cargar la liga: {error}</div>;
+    }
+
+    const { league_name, status, currentMatch, nextMatch, standings, calendar } = lobby_data || {};
+
+    return (
+        <div className="lobby-view">
+            {/* Toast sutil de notificación en tiempo real */}
+            {last_toast && (
+                <div className="toast-alert" role="status">
+                    ⚽ {last_toast}
+                </div>
+            )}
+
+            <header className="lobby-header">
+                <div>
+                    <h1 className="text-xl font-bold">{league_name || 'Lobby de Liga'}</h1>
+                    <p className="text-sm text-[#b5c2b3]">Estado: <span className="uppercase text-[#bf9548] font-semibold">{status}</span></p>
+                </div>
+                <button className="waiting-btn-secondary" onClick={() => navigate('/home')}>
+                    Volver al Home
+                </button>
+            </header>
+
+            <div className="lobby-grid">
+                {/* Partido en Disputa */}
+                <section className="match-card">
+                    <h2 className="text-lg font-semibold border-b border-[#2f5a36] pb-2">Partido en Vivo (Current Match)</h2>
+                    {currentMatch ? (
+                        <div className="flex flex-col gap-3 py-4 items-center text-center">
+                            <p className="text-sm text-[#c9d6c5]">Jornada {currentMatch.round}</p>
+                            <div className="flex justify-between items-center w-full px-6">
+                                <span className="font-bold text-lg">{currentMatch.home_club_name || 'Local'}</span>
+                                <span className="text-2xl font-mono bg-[#0b2a16] px-4 py-1 rounded border border-[#2f5a36]">
+                                    {currentMatch.home_score} - {currentMatch.away_score}
+                                </span>
+                                <span className="font-bold text-lg">{currentMatch.away_club_name || 'Visitante'}</span>
+                            </div>
+                            <button 
+                                className="waiting-btn-primary mt-2 text-xs py-2 px-4"
+                                onClick={() => navigate(`/matches/${currentMatch.id}`)}
+                            >
+                                Ver Transmisión en Vivo 👁️
+                            </button>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-[#c9d6c5] italic py-6 text-center">No hay ningún partido disputándose en este momento exacto.</p>
+                    )}
+                </section>
+
+                {/* Siguiente Partido / Preview */}
+                <section className="match-card">
+                    <h2 className="text-lg font-semibold border-b border-[#2f5a36] pb-2">Próximo Encuentro (Next Match)</h2>
+                    {nextMatch ? (
+                        <div className="flex flex-col gap-3 py-4 items-center text-center">
+                            <p className="text-sm text-[#c9d6c5]">Jornada {nextMatch.round}</p>
+                            <div className="flex justify-between items-center w-full px-6">
+                                <span className="font-medium">{nextMatch.home_club_name || 'Local'}</span>
+                                <span className="text-sm font-mono uppercase text-[#bf9548]">VS</span>
+                                <span className="font-medium">{nextMatch.away_club_name || 'Visitante'}</span>
+                            </div>
+                            <p className="text-xs text-[#b5c2b3] mt-2">Prepárate en tu plantilla y tácticas.</p>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-[#c9d6c5] italic py-6 text-center">No hay más partidos programados próximamente.</p>
+                    )}
+                </section>
+            </div>
+
+            {/* Tabla de Clasificación */}
+            <section className="standings-card">
+                <h2 className="text-lg font-semibold border-b border-[#2f5a36] pb-2">Tabla de Clasificación</h2>
+                <div className="overflow-x-auto">
+                    <table className="standings-table">
+                        <thead>
+                            <tr className="text-[#b5c2b3] text-xs uppercase border-b border-[#2f5a36]">
+                                <th>Pos</th>
+                                <th>Club</th>
+                                <th>PTS</th>
+                                <th>PJ</th>
+                                <th>G</th>
+                                <th>E</th>
+                                <th>P</th>
+                                <th>GF</th>
+                                <th>GC</th>
+                                <th>DG</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {standings?.map((row, index) => {
+                                const is_my_club = row.club_id === user_club_id;
+                                return (
+                                    <tr key={row.club_id} className={is_my_club ? 'my-club-row' : ''}>
+                                        <td>{index + 1}</td>
+                                        <td className="font-medium">{row.club_name} {is_my_club && '(Tú)'}</td>
+                                        <td className="font-bold">{row.points}</td>
+                                        <td>{row.matches_played}</td>
+                                        <td>{row.matches_won}</td>
+                                        <td>{row.matches_drawn}</td>
+                                        <td>{row.matches_lost}</td>
+                                        <td>{row.goals_for}</td>
+                                        <td>{row.goals_against}</td>
+                                        <td>{row.goal_difference}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            {/* Calendario / Fixture */}
+            <section className="calendar-card">
+                <h2 className="text-lg font-semibold border-b border-[#2f5a36] pb-2">Calendario del Torneo</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-60 overflow-y-auto pr-2">
+                    {calendar?.map((match) => (
+                        <div key={match.id} className="flex justify-between items-center p-3 bg-[#0b2a16] rounded border border-[#2f5a36] text-sm">
+                            <span className="text-xs text-[#b5c2b3]">J{match.round}</span>
+                            <span className="truncate max-w-[120px]">{match.home_club_name}</span>
+                            <span className="font-mono font-bold bg-[#164e2c] px-2 py-0.5 rounded">
+                                {match.status === 'finished' ? `${match.home_score} - ${match.away_score}` : 'vs'}
+                            </span>
+                            <span className="truncate max-w-[120px] text-right">{match.away_club_name}</span>
+                        </div>
+                    ))}
+                </div>
+            </section>
+        </div>
+    );
+}

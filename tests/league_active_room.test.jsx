@@ -1,0 +1,165 @@
+import { render, screen, waitFor, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import OngoingLeagueLobbyView from '../src/pages/league_active_room';
+import * as sessionModule from '../src/auth/session';
+
+vi.mock('../auth/session', () => ({
+    read_session: vi.fn()
+}));
+
+global.fetch = vi.fn();
+
+// Mock global de WebSocket para simular tiempo real
+class MockWebSocket {
+    constructor(url) {
+        MockWebSocket.instances.push(this);
+        this.url = url;
+    }
+    send = vi.fn();
+    close = vi.fn();
+}
+MockWebSocket.instances = [];
+global.WebSocket = MockWebSocket;
+
+describe('OngoingLeagueLobbyView - Suite Exhaustiva', () => {
+    const mock_session = {
+        token: 'fake-jwt-token',
+        club_id: 'club-1'
+    };
+
+    const mock_lobby_payload = {
+        league_id: 'league-123',
+        league_name: 'Liga Estelar',
+        status: 'in_progress',
+        currentMatch: {
+            id: 'm-1',
+            round: 1,
+            home_club_id: 'club-1',
+            away_club_id: 'club-2',
+            home_club_name: 'Club Alfa',
+            away_club_name: 'Club Beta',
+            home_score: 1,
+            away_score: 0,
+            status: 'in_progress'
+        },
+        nextMatch: {
+            id: 'm-2',
+            round: 2,
+            home_club_name: 'Club Beta',
+            away_club_name: 'Club Gamma'
+        },
+        standings: [
+            { club_id: 'club-1', club_name: 'Club Alfa', points: 3, matches_played: 1, matches_won: 1, matches_drawn: 0, matches_lost: 0, goals_for: 1, goals_against: 0, goal_difference: 1 },
+            { club_id: 'club-2', club_name: 'Club Beta', points: 0, matches_played: 1, matches_won: 0, matches_drawn: 0, matches_lost: 1, goals_for: 0, goals_against: 1, goal_difference: -1 }
+        ],
+        calendar: [
+            { id: 'm-1', round: 1, home_club_name: 'Club Alfa', away_club_name: 'Club Beta', home_score: 1, away_score: 0, status: 'finished' }
+        ]
+    };
+
+    beforeEach(() => {
+        MockWebSocket.instances = [];
+        vi.spyOn(sessionModule, 'read_session').mockReturnValue(mock_session);
+        global.fetch.mockResolvedValue({
+            ok: true,
+            json: async () => mock_lobby_payload
+        });
+    });
+
+    afterEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('1. Renderiza correctamente el lobby con el fetch inicial y destaca al club del usuario', async () => {
+        render(
+            <MemoryRouter initialEntries={['/league/league-123/active']}>
+                <Routes>
+                    <Route path="/league/:league_id/active" element={<OngoingLeagueLobbyView />} />
+                </Routes>
+            </MemoryRouter>
+        );
+
+        expect(await screen.findByText('Liga Estelar')).toBeInTheDocument();
+        expect(screen.getAllByText('Club Alfa').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('1 - 0').length).toBeGreaterThan(0);
+
+        const my_club_row = screen.getByText('Club Alfa (Tú)').closest('tr');
+        expect(my_club_row).toHaveClass('my-club-row');
+    });
+
+    it('2. Muestra la información del próximo encuentro y el calendario correctamente', async () => {
+        render(
+            <MemoryRouter initialEntries={['/league/league-123/active']}>
+                <Routes>
+                    <Route path="/league/:league_id/active" element={<OngoingLeagueLobbyView />} />
+                </Routes>
+            </MemoryRouter>
+        );
+
+        expect(await screen.findByText('Próximo Encuentro (Next Match)')).toBeInTheDocument();
+        expect(screen.getByText('Club Gamma')).toBeInTheDocument();
+        expect(screen.getByText('Calendario del Torneo')).toBeInTheDocument();
+    });
+
+    it('3. Reacciona a los mensajes del WebSocket actualizando la UI y mostrando el Toast', async () => {
+        render(
+            <MemoryRouter initialEntries={['/league/league-123/active']}>
+                <Routes>
+                    <Route path="/league/:league_id/active" element={<OngoingLeagueLobbyView />} />
+                </Routes>
+            </MemoryRouter>
+        );
+
+        await screen.findByText('Liga Estelar');
+
+        // Obtener la instancia del WebSocket creada por el hook
+        const ws_instance = MockWebSocket.instances[0];
+        expect(ws_instance).toBeDefined();
+
+        // Simular la llegada de un mensaje en tiempo real por el WS
+        const ws_message = {
+            type: 'match_update',
+            payload: {
+                currentMatch: {
+                    id: 'm-2',
+                    round: 2,
+                    home_club_id: 'club-2',
+                    away_club_id: 'club-3',
+                    home_club_name: 'Club Beta',
+                    away_club_name: 'Club Gamma',
+                    home_score: 2,
+                    away_score: 2,
+                    status: 'in_progress'
+                }
+            },
+            toast: 'Partido finalizado: Club Alfa 1 - 0 Club Beta'
+        };
+
+        act(() => {
+            ws_instance.onmessage({ data: JSON.stringify(ws_message) });
+        });
+
+        // Validar que el Toast sutil aparece en pantalla
+        expect(await screen.findByText(/Partido finalizado: Club Alfa 1 - 0 Club Beta/i)).toBeInTheDocument();
+        
+        // Validar que el partido actual cambió en la vista en tiempo real
+        expect(screen.getByText('2 - 2')).toBeInTheDocument();
+    });
+
+    it('4. Maneja adecuadamente el error de carga HTTP del lobby', async () => {
+        global.fetch.mockResolvedValueOnce({
+            ok: false
+        });
+
+        render(
+            <MemoryRouter initialEntries={['/league/league-123/active']}>
+                <Routes>
+                    <Route path="/league/:league_id/active" element={<OngoingLeagueLobbyView />} />
+                </Routes>
+            </MemoryRouter>
+        );
+
+        expect(await screen.findByText(/Error al cargar la liga/i)).toBeInTheDocument();
+    });
+});
