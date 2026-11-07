@@ -11,7 +11,10 @@ import FriendlyRoomPage from './pages/friendly_room_page'
 import './styles/tokens.css'
 import './App.css'
 import JoinFriendly from './pages/join_friendly'
+import JoinLeaguePage from './pages/join_league_page'
+import LeagueWaitingRoom from './pages/league_waiting_room'
 import LeaguesPage from './pages/leagues_page'
+import BehaviorEditorPage from './pages/behavior_editor_page'
 
 
 const Navbar = () => (
@@ -81,12 +84,16 @@ export default function App() {
         <Route path="/auth/register" element={<Navigate to="/register" replace />} />
         <Route path="/auth/login" element={<Navigate to="/login" replace />} />
         <Route path="/behaviors" element={<DashboardLayout><BehaviorPage /></DashboardLayout>} />
+        <Route path="/behaviors/create" element={<DashboardLayout><BehaviorEditorPage /></DashboardLayout>} />
+        <Route path="/behaviors/edit/:behavior_id" element={<DashboardLayout><BehaviorEditorPage /></DashboardLayout>} />
         <Route path="/login" element={<Login />} />
         <Route path="/matches/:match_id" element={<Match />} />
         <Route path="/home" element={<Home />} />
         <Route path="/friendly/join" element={<JoinFriendly />} />
+        <Route path="/ligas/:league_id/unirse" element={<JoinLeaguePage />} />
         <Route path="/amistosos/:room_id/sala" element={<DashboardLayout><FriendlyRoomPage /></DashboardLayout>} />
         <Route path="/partidos/:match_id" element={<Match />} />
+        <Route path="/league/:league_id/waiting" element={<LeagueWaitingRoom />}/>
         <Route path="/leagues" element={<LeaguesPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
