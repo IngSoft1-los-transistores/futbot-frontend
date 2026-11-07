@@ -156,7 +156,11 @@ export default function CreateLeagueForm({ onCancel }) {
     return (
       <div className="grid gap-3 text-white">
         <h3 className="text-lg font-semibold">¡Liga creada correctamente!</h3>
-        <p className="text-sm">Compartí este código para que otros clubes se unan:</p>
+        <p className="text-sm">
+          {created_league.is_private
+            ? 'Compartí este código y la contraseña para que otros clubes se unan:'
+            : 'Compartí este código para que otros clubes se unan:'}
+        </p>
         <div className="flex items-center justify-between rounded-[5px] border border-[#2F5A36] bg-[#0F2416] px-3 py-2 font-mono">
           <span>{created_league.code_to_join}</span>
           <button
