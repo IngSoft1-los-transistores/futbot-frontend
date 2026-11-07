@@ -66,6 +66,7 @@ function to_squad_selection(player) {
 export async function createLeague({
   name,
   is_private,
+  has_penalty_shootout,
   password,
   min_clubs,
   max_clubs,
@@ -81,6 +82,7 @@ export async function createLeague({
   const req = {
     name: name.trim(),
     is_private: is_private === true,
+    has_penalty_shootout: has_penalty_shootout === true,
     min_clubs: Number(min_clubs),
     max_clubs: Number(max_clubs),
     match_duration: Number(match_duration),
@@ -98,4 +100,10 @@ export async function createLeague({
     headers: { Authorization: `Bearer ${session.access_token}` },
     body: JSON.stringify(req),
   });
+}
+export function getLeagueStandings(leagueId, { signal } = {}) {
+  return request(
+    `/api/leagues/${encodeURIComponent(leagueId)}/standings`,
+    { signal }
+  );
 }

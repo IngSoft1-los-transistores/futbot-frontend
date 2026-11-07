@@ -1,16 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { request } from '../src/api/client'
-import { read_session } from '../src/auth/session'
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   apply_league_list,
   createLeague,
   find_league_by_code,
   free_spots,
   get_league,
+  getLeagueStandings,
   is_league_full,
   join_league,
   OPEN_LEAGUE_STATUSES,
-} from '../src/api/leagues'
+} from "../src/api/leagues.js";
+import { request } from "../src/api/client";
+import { read_session } from "../src/auth/session";
 
 vi.mock('../src/api/client', () => ({ request: vi.fn() }))
 vi.mock('../src/auth/session', () => ({ read_session: vi.fn() }))
@@ -183,6 +184,7 @@ describe("createLeague", () => {
     expect(body).toEqual({
       name: "Liga de prueba",
       is_private: false,
+      has_penalty_shootout: false,
       min_clubs: 3,
       max_clubs: 30,
       match_duration: 90,
@@ -221,6 +223,16 @@ describe("createLeague", () => {
 
     expect(body.is_private).toBe(false);
     expect("password" in body).toBe(false);
+    expect(body.has_penalty_shootout).toBe(false);
+  });
+
+  it("envía has_penalty_shootout como booleano", async () => {
+    await createLeague({ ...input, has_penalty_shootout: true });
+
+    const body = JSON.parse(request.mock.calls[0][1].body);
+
+    expect(body.has_penalty_shootout).toBe(true);
+    expect(typeof body.has_penalty_shootout).toBe("boolean");
   });
 
   it("envía is_private y password para una liga privada", async () => {
@@ -236,5 +248,15 @@ describe("createLeague", () => {
 
     expect(body.is_private).toBe(true);
     expect(body.password).toBe(password);
+  });
+  it("consulta las posiciones de una liga por su endpoint", async () => {
+    request.mockResolvedValue([]);
+
+    await getLeagueStandings("league/1");
+
+    expect(request).toHaveBeenCalledWith(
+      "/api/leagues/league%2F1/standings",
+      expect.objectContaining({ signal: undefined })
+    );
   });
 });

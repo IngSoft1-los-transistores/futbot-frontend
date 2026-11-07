@@ -39,6 +39,7 @@ async function mock_leagues_socket(page, initial = leagues) {
   const send_list = (connection) => connection.ws.send(JSON.stringify({
     type: 'leagues', name: connection.name, leagues: filter_leagues(mock.all, connection.name),
   }))
+  await page.route('**/api/leagues/*/standings', (route) => route.fulfill({ json: [] }))
   await page.routeWebSocket(WS_URL, (ws) => {
     const connection = { ws, name: '' }
     mock.connections.push(connection)
