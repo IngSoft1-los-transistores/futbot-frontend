@@ -31,6 +31,9 @@ const normalize_ball = (ball) => is_obj(ball) && is_num(ball.x) && is_num(ball.y
 const normalize_score = (score) => is_obj(score) && is_num(score.home) && is_num(score.away)
   ? { home: score.home, away: score.away }
   : null
+const normalize_team = (team) => typeof team === 'string' && ['HOME', 'AWAY'].includes(team.toUpperCase())
+  ? team.toUpperCase()
+  : null
 const protocol_initial_state = {
   connection: 'connecting', status: 'notStarted', role: null, current_time: 0,
   score: { home: 0, away: 0 }, ball: null, players: {}, clubs: null,
@@ -71,7 +74,7 @@ function protocol_reducer(state, action) {
   ].includes(action.message.event)) return state
   state = { ...state, received: true }
   const { event, payload } = action.message
-  const team = ['HOME', 'AWAY'].includes(payload.team) ? payload.team : null
+  const team = normalize_team(payload.team)
   switch (event) {
     case 'MATCH_CONNECTED':
       return { ...state, status: payload.status ?? state.status, role: payload.role ?? state.role,
@@ -109,7 +112,7 @@ function protocol_reducer(state, action) {
       return remember_event({
         ...state,
         pending_substitutions,
-        toast: 'Sustitución planificada para la siguiente pausa',
+        toast: team === action.own_team ? 'Sustitución planificada para la siguiente pausa' : state.toast,
       }, { type: 'substitution_scheduled', team, leaving_player_id: payload.outPlayerId, entering_player_id: payload.inPlayerId })
     }
     case 'SUBSTITUTION_APPLIED': {
@@ -123,8 +126,10 @@ function protocol_reducer(state, action) {
         ...state,
         pending_substitutions,
         changes_used_this_pause,
-        substitution_last_applied: { team, outPlayerId: payload.outPlayerId, inPlayerId: payload.inPlayerId },
-        toast: 'Sustitución efectuada',
+        substitution_last_applied: team === action.own_team
+          ? { team, outPlayerId: payload.outPlayerId, inPlayerId: payload.inPlayerId }
+          : state.substitution_last_applied,
+        toast: team === action.own_team ? 'Sustitución efectuada' : state.toast,
       }, { type: 'substitution', team, leaving_player_id: payload.outPlayerId, entering_player_id: payload.inPlayerId })
     }
     case 'MATCH_RESUMED':
@@ -136,11 +141,12 @@ function protocol_reducer(state, action) {
     case 'MATCH_FINISHED':
       return { ...state, status: 'finished', pause: null, score: normalize_score(payload.finalScore) ?? state.score }
     case 'ERROR': {
+      if (payload.team != null && (!team || team !== action.own_team)) return state
       const message = String(payload.message ?? 'Error de ejecución')
-      const at_limit = message.toLowerCase().includes('solo se permite 1 cambio por pausa')
+      const at_limit = payload.error_code === 'SUBSTITUTION_LIMIT_REACHED'
       return {
         ...state,
-        errors: [{ code: payload.code, message, player_id: payload.playerId }, ...state.errors].slice(0, 5),
+        errors: [{ code: payload.error_code ?? payload.code, message, player_id: payload.playerId }, ...state.errors].slice(0, 5),
         toast: message,
         changes_used_this_pause: at_limit && team
           ? { ...state.changes_used_this_pause, [team]: true }
@@ -159,6 +165,7 @@ function MatchView({ match_id, room_behavior_names }) {
   const [submitting_substitution, set_submitting_substitution] = useState(false)
   const [substitution_error, set_substitution_error] = useState('')
   const own_club_id = useMemo(() => read_session()?.club_id, [])
+  const own_team_ref = useRef(null)
   const receive_protocol_message = useCallback((raw) => {
     if (raw?.type === 'connection') {
       dispatch_protocol({ type: 'connection', value: raw.value })
@@ -166,14 +173,27 @@ function MatchView({ match_id, room_behavior_names }) {
     }
     const message = parse_match_message(raw)
     if (message) {
-      if (['SUBSTITUTION_SCHEDULED', 'SUBSTITUTION_APPLIED', 'ERROR'].includes(message.event)) {
+      const team = normalize_team(message.payload.team)
+      const is_own_team_event = team !== null && team === own_team_ref.current
+      const is_substitution_error = message.event === 'ERROR' &&
+        typeof message.payload.error_code === 'string' &&
+        message.payload.error_code.startsWith('SUBSTITUTION_')
+      if (is_own_team_event && ['SUBSTITUTION_SCHEDULED', 'SUBSTITUTION_APPLIED'].includes(message.event)) {
         set_submitting_substitution(false)
-        set_substitution_error(message.event === 'ERROR' ? String(message.payload.message ?? '') : '')
+        set_substitution_error('')
+      } else if (is_own_team_event && is_substitution_error) {
+        set_submitting_substitution(false)
+        set_substitution_error(String(message.payload.message ?? 'Error de sustitución'))
       }
-      dispatch_protocol({ type: 'message', message })
+      dispatch_protocol({ type: 'message', message, own_team: own_team_ref.current })
     }
   }, [])
   const { state, error, loading, waiting_for_start, send_match_command } = useMatchState(match_id, receive_protocol_message)
+  const own_team = state && own_club_id === state.home_club.club_id ? 'HOME'
+    : state && own_club_id === state.away_club.club_id ? 'AWAY' : null
+  useEffect(() => {
+    own_team_ref.current = own_team
+  }, [own_team])
   const [retrying_start, set_retrying_start] = useState(false)
   const [start_error, set_start_error] = useState('')
   const previous_status = useRef(null)
@@ -222,8 +242,6 @@ function MatchView({ match_id, room_behavior_names }) {
 
   const behavior_name = (player) => player.behavior_name?.trim() || behavior_names[player.behavior_id] || room_behavior_names?.[player.behavior_id] || 'Nombre no disponible'
   const encounter = state ? `${state.home_club.name} vs. ${state.away_club.name}` : 'Estado del partido'
-  const own_team = state && own_club_id === state.home_club.club_id ? 'HOME'
-    : state && own_club_id === state.away_club.club_id ? 'AWAY' : null
   const team_coach_active = state?.coach_active === true ||
     state?.active_coach === true ||
     state?.coach_active?.[own_team] === true ||

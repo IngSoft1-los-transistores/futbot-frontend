@@ -122,7 +122,7 @@ describe('Estado del partido por WebSocket', () => {
     }))
 
     await emit(() => sockets[0].message({
-      type: 'SUBSTITUTION_SCHEDULED', team: 'HOME', outPlayerId: 'p1', inPlayerId: 'p4',
+      type: 'SUBSTITUTION_SCHEDULED', team: 'home', outPlayerId: 'p1', inPlayerId: 'p4',
     }))
     expect(screen.getByText(/Cambio planificado para la próxima pausa:/)).toBeInTheDocument()
     expect(document.querySelector('.substitution-scheduled')).toHaveTextContent('Jugador 01 por Jugador 04')
@@ -134,7 +134,7 @@ describe('Estado del partido por WebSocket', () => {
     await emit(() => { sockets[0].open(); sockets[0].state({ status: 'paused' }) })
     await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Sustituir' })))
     await emit(() => sockets[0].message({
-      type: 'SUBSTITUTION_APPLIED', team: 'HOME', outPlayerId: 'p1', inPlayerId: 'p4',
+      type: 'SUBSTITUTION_APPLIED', team: 'home', outPlayerId: 'p1', inPlayerId: 'p4',
     }))
     expect(screen.getByText('Límite alcanzado: 1 cambio por pausa')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Confirmar cambio/ })).toBeDisabled()
@@ -152,6 +152,54 @@ describe('Estado del partido por WebSocket', () => {
     await emit(() => sockets[0].message({ type: 'MATCH_RESUMED' }))
     expect(screen.queryByText('Límite alcanzado: 1 cambio por pausa')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Confirmar cambio/ })).toBeEnabled()
+  })
+
+  it('solo muestra eventos de sustitución del equipo propio y no limpia su solicitud', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Sustituir' })))
+    await emit(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Jugador 01/ }))
+      fireEvent.click(screen.getByRole('button', { name: /Jugador 04/ }))
+    })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: /Confirmar cambio/ })))
+
+    await emit(() => sockets[0].message({
+      type: 'SUBSTITUTION_SCHEDULED', team: 'away', outPlayerId: 'a1', inPlayerId: 'a4',
+    }))
+    await emit(() => sockets[0].message({
+      type: 'SUBSTITUTION_APPLIED', team: 'away', outPlayerId: 'a1', inPlayerId: 'a4',
+    }))
+    await emit(() => sockets[0].message({
+      type: 'error', team: 'away', error_code: 'SUBSTITUTION_LIMIT_REACHED', message: 'Límite rival',
+    }))
+
+    expect(screen.getByRole('button', { name: /Enviando/ })).toBeInTheDocument()
+    expect(document.querySelector('.substitution-scheduled')).toBeNull()
+    expect(document.querySelector('.substitution-limit')).toBeNull()
+    expect(document.querySelector('.substitution-error')).toBeNull()
+    expect(screen.queryByText('Sustitución planificada para la siguiente pausa')).not.toBeInTheDocument()
+    expect(screen.queryByText('Sustitución efectuada')).not.toBeInTheDocument()
+  })
+
+  it('detecta el límite por error_code y no por la redacción del mensaje', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state({ status: 'paused' }) })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Sustituir' })))
+    await emit(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Jugador 01/ }))
+      fireEvent.click(screen.getByRole('button', { name: /Jugador 04/ }))
+    })
+    await emit(() => sockets[0].message({
+      type: 'error',
+      team: 'home',
+      error_code: 'SUBSTITUTION_LIMIT_REACHED',
+      message: 'El cupo disponible ya fue utilizado',
+    }))
+
+    expect(document.querySelector('.substitution-limit')).toHaveTextContent('Límite alcanzado')
+    expect(document.querySelector('.substitution-error')).toHaveTextContent('El cupo disponible ya fue utilizado')
+    expect(screen.getByRole('button', { name: /Confirmar cambio/ })).toBeDisabled()
   })
 
   it('conserva el último estado al desconectarse y recupera el snapshot al reconectar', async () => {
