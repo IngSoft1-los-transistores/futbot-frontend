@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { connect_match_state } from '../api/matches'
 import { clear_session, read_session } from '../auth/session'
@@ -24,6 +24,17 @@ export default function useMatchState(match_id, on_protocol_message) {
   const navigate = useNavigate()
   const [view, set_view] = useState({ state: null, error: '', loading: true })
   const protocol_message_ref = useRef(on_protocol_message)
+  const send_ref = useRef(null)
+  const pending_change_ref = useRef(false)
+
+  const send_message = useCallback((message) => {
+    if (!send_ref.current) return false
+    if (message.action === 'CHANGE_BEHAVIOR') {
+      pending_change_ref.current = true
+      setTimeout(() => { pending_change_ref.current = false }, 5000)
+    }
+    return send_ref.current(message)
+  }, [])
 
   useEffect(() => {
     protocol_message_ref.current = on_protocol_message
@@ -39,7 +50,11 @@ export default function useMatchState(match_id, on_protocol_message) {
     let latest = null
     let attempts = 0
     let connected_session
-
+    send_ref.current = (message) => {
+      if (!socket || socket.readyState !== 1) return false
+      socket.send(JSON.stringify(message))
+      return true
+    }
     const disconnect = () => {
       clearTimeout(watchdog)
       if (socket) {
@@ -110,6 +125,12 @@ export default function useMatchState(match_id, on_protocol_message) {
               current.send(JSON.stringify({ type: 'pong' }))
               return
             }
+            if (message.type === 'behavior_change_accepted') pending_change_ref.current = false
+            if (message.type === 'error' && message.status !== 401 && pending_change_ref.current) {
+              pending_change_ref.current = false
+              protocol_message_ref.current?.(event.data)
+              return
+            }
             if (message.type === 'error') {
               if (message.status === 401) { reject_session(); return }
               if (terminal_errors[message.status]) {
@@ -174,8 +195,9 @@ export default function useMatchState(match_id, on_protocol_message) {
       window.removeEventListener('storage', storage_changed)
       window.removeEventListener('focus', check_session)
       document.removeEventListener('visibilitychange', check_session)
+      send_ref.current = null
     }
   }, [match_id, navigate])
 
-  return view
+  return { ...view, send_message }
 }
