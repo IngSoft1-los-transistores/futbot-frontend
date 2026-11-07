@@ -4,7 +4,6 @@ import { getMyPlayers, getMyBehaviors } from '../api/friendly';
 import { validate_league } from './league_validation';
 import SquadSelector from './SquadSelector';
 import { createLeague } from '../api/leagues';
-import { create_simulation_ticket } from '../api/behaviors';
 import MiniPitchViewer from './mini_pitch_viewer';
 
 const INITIAL_FORM = {
