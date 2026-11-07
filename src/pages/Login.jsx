@@ -125,6 +125,7 @@ export default function Login() {
                   <LoginIcon kind="arrow" />
                 </button>
               </form>
+              <p className="login-footer"><Link to="/forgot-password">¿Olvidaste tu contraseña?</Link></p>
               {unverifiedEmail !== null && <ResendVerificationForm key={unverifiedEmail} initialEmail={unverifiedEmail} />}
             </div>
             <footer className="login-footer">
