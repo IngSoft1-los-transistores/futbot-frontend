@@ -9,7 +9,7 @@ import { save_session } from '../src/auth/session'
 vi.mock('../src/api/behaviors', () => ({ get_behaviors: vi.fn() }))
 vi.mock('../src/api/matches', () => ({ connect_match_state: vi.fn(), retry_match_start: vi.fn() }))
 const snapshot = (changes = {}) => ({
-  match_id: 'match-1', revision: 1, status: 'in_progress',
+  match_id: 'match-1', revision: 1, status: 'in_progress', phase: 'PLAYING', pause_duration: null, pause_remaining: null,
   home_club: { club_id: 'home', name: 'Local FC' }, away_club: { club_id: 'away', name: 'Visitante FC' },
   score: { home: 0, away: 0 }, current_time: 5, remaining_time: 295,
   ball: { x: 10, y: 20, owner_player_id: null },
@@ -102,7 +102,7 @@ describe('Estado del partido por WebSocket', () => {
     expect(screen.getByLabelText('Marcador: 0 a 0')).toBeInTheDocument()
     await tick()
     expect(sockets).toHaveLength(2)
-    await emit(() => sockets[1].state({ revision: 2, status: 'paused' }))
+    await emit(() => sockets[1].state({ revision: 2, status: 'paused', phase: 'HYDRATION', pause_duration: 15, pause_remaining: 15 }))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.getByText('En pausa')).toBeInTheDocument()
   })
@@ -195,5 +195,55 @@ describe('Estado del partido por WebSocket', () => {
     expect(sockets).toHaveLength(1)
     expect(sockets[0].onmessage).toBeNull()
     expect(sockets[0].close).toHaveBeenCalled()
+  })
+})
+
+describe('Banner de pausa', () => {
+  const paused = (changes = {}) => ({ status: 'paused', phase: 'HYDRATION', pause_duration: 15, pause_remaining: 15, current_time: 75, ...changes })
+  const banner = (name) => screen.queryByRole('region', { name })
+  const countdown = () => screen.getByLabelText('Tiempo restante de la pausa')
+
+  it('muestra la pausa con la duración del backend y la quita al reanudarse', async () => {
+    mount()
+    await emit(() => sockets[0].state())
+    expect(banner('Pausa de hidratación')).not.toBeInTheDocument()
+    await emit(() => sockets[0].state(paused({ revision: 2 })))
+    expect(banner('Pausa de hidratación')).toBeInTheDocument()
+    expect(countdown()).toHaveTextContent('15 s')
+    await tick(3000)
+    await emit(() => sockets[0].state(paused({ revision: 3, pause_remaining: 12 })))
+    expect(countdown()).toHaveTextContent('12 s')
+    await emit(() => sockets[0].state({ revision: 4, current_time: 76 }))
+    expect(banner('Pausa de hidratación')).not.toBeInTheDocument()
+  })
+
+  it('arranca en el tiempo restante al entrar a un partido ya pausado', async () => {
+    mount()
+    await emit(() => sockets[0].state(paused({ phase: 'HALFTIME', current_time: 150, pause_remaining: 5 })))
+    expect(banner('Entretiempo')).toBeInTheDocument()
+    expect(countdown()).toHaveTextContent('5 s')
+  })
+
+  it('sigue contando mientras se reconecta en medio de la pausa', async () => {
+    mount()
+    await emit(() => sockets[0].state(paused()))
+    await tick(2000)
+    await emit(() => sockets[0].fail())
+    expect(banner('Pausa de hidratación')).toBeInTheDocument()
+    await tick(1000)
+    expect(sockets).toHaveLength(2)
+    expect(countdown()).toHaveTextContent('12 s')
+    await emit(() => sockets[1].state(paused({ revision: 2, pause_remaining: 12 })))
+    expect(countdown()).toHaveTextContent('12 s')
+  })
+
+  it('reinicia la cuenta en una pausa nueva aunque no llegue el juego intermedio', async () => {
+    mount()
+    await emit(() => sockets[0].state(paused()))
+    await tick(10000)
+    expect(countdown()).toHaveTextContent('5 s')
+    await emit(() => sockets[0].state(paused({ revision: 2, phase: 'HALFTIME', current_time: 150 })))
+    expect(banner('Entretiempo')).toBeInTheDocument()
+    expect(countdown()).toHaveTextContent('15 s')
   })
 })
