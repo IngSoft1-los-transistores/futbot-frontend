@@ -160,7 +160,6 @@ export async function list_behaviors(options = {}) {
 }
 
 // Convierte el equipo del frontend al formato usado por el endpoint /join.
-// Conservamos el contrato actual: titulares, suplentes, playerId y behaviorId.
 export function join_friendly_room({
   room_id,
   code,
@@ -178,30 +177,9 @@ export function join_friendly_room({
       method: 'POST',
       body: JSON.stringify({
         code,
-        titulares: starters.map(to_payload),
-        suplentes: substitutes.map(to_payload),
+        starters: starters.map(to_payload),
+        substitutes: substitutes.map(to_payload),
       }),
     }
   )
-}
-
-// Deja de cada liga solo lo que usa la pantalla
-function normalize_league(raw) {
-  return {
-    id: raw.id,
-    name: raw.name,
-    participants_count: raw.participantsCount ?? raw.participants_count ?? 0,
-    started: Boolean(raw.started),
-    is_private: Boolean(raw.isPrivate ?? raw.is_private),
-  }
-}
-
-// Ligas registradas. Con `name` el backend devuelve solo las que coinciden.
-export async function list_leagues({ name = '', signal } = {}) {
-  const params = new URLSearchParams()
-  const clean_name = name.trim()
-  if (clean_name) params.set('name', clean_name)
-  const query = params.toString()
-  const body = await request(`/api/leagues${query ? `?${query}` : ''}`, { signal })
-  return as_list(body, 'leagues').map(normalize_league)
 }
