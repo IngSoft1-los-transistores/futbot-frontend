@@ -90,7 +90,7 @@ export default function LeaguesPage() {
           <section className="leagues-selection" aria-labelledby="leagues-selected-title">
             <h2 id="leagues-selected-title">Liga seleccionada: {selected.name}</h2>
             <p>{participants_label(selected.participants_count)} · {selected.started ? 'Iniciada' : 'Sin iniciar'}</p>
-            {/* TICKET "UNIRSE A LIGA": el botón para continuar va acá, usando `selected` */}
+            <button className="home-action" onClick={() => navigate(`/ligas/${encodeURIComponent(selected.id)}/unirse`)}>Unirse a Liga</button>
             <button className="home-action" onClick={() => set_selected(null)}>Quitar selección</button>
           </section>
         )}
