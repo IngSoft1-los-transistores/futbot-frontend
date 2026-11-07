@@ -3,6 +3,7 @@ import { get_behaviors } from '../api/behaviors'
 import { retry_match_start } from '../api/matches'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import useMatchState from '../hooks/use_match_state'
+import PauseBanner from '../components/pause_banner'
 import MatchPitch from '../components/match_pitch'
 import './Match.css'
 
@@ -163,7 +164,11 @@ function MatchView({ match_id, room_behavior_names }) {
           </div>
           <div className="match-clock"><span className={`match-status match-status--${state.status}`}>{statuses[state.status]}</span><time aria-label="Tiempo transcurrido">{time(state.current_time)}</time></div>
         </section>
-        <MatchPitch state={state} protocol_state={protocol_state} />
+        <div className="match-pitch-stage">
+          {/* current_time is frozen during a pause, so the key only changes when a new pause starts. */}
+          {state.status === 'paused' && <PauseBanner key={`${state.phase}-${state.current_time}`} phase={state.phase} pause_duration={state.pause_duration} pause_remaining={state.pause_remaining} />}
+          <MatchPitch state={state} protocol_state={protocol_state} />
+        </div>
         <div className="match-pitch-footer"><Link to="/home">← Volver al menú</Link><span>Restante: <time>{time(state.remaining_time)}</time></span></div>
         <details className="match-details">
           <summary>Jugadores y acciones del partido</summary>
