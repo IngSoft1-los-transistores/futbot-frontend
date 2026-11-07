@@ -193,6 +193,14 @@ export default function Home() {
                 >
                   VER COMPORTAMIENTOS
                 </Link>
+
+                {/* Botón de acceso a la ruta */}
+                <Link
+                  to="/behaviors/create"
+                  className="home-action"
+                >
+                  CREAR
+                </Link>
               </article>
 
               {/* Tarjeta de Privados */}

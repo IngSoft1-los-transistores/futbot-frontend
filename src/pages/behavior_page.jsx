@@ -92,7 +92,8 @@ export default function BehaviorPage() {
                                     name={behavior_element.name} 
                                     code={behavior_element.code}
                                     isDefault={behavior_element.isDefault}
-                                    onDetails={() => set_selected_behavior(behavior_element)} 
+                                    onDetails={() => set_selected_behavior(behavior_element)}
+                                    onEdit={() => navigate(`/behaviors/edit/${behavior_element.id}`)}
                                 />
                             )
                         })}
