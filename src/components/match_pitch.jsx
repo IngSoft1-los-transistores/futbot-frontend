@@ -7,7 +7,7 @@ const project = ({ x, y }) => ({
   y: 311 - Math.max(-0.5, Math.min(0.5, y / FIELD_HEIGHT)) * 554,
 })
 
-export default function MatchPitch({ state, protocol_state }) {
+export default function MatchPitch({ state, protocol_state, penalties_active = false }) {
   const players = state.players.length ? state.players : Object.values(protocol_state?.players ?? {}).map((player) => ({
     player_id: player.id,
     club_id: player.club_id,
@@ -16,6 +16,10 @@ export default function MatchPitch({ state, protocol_state }) {
     has_ball: false,
     position: { x: player.x, y: player.y },
   }))
+  const on_field_players = players.filter((player) => player.on_field && player.position)
+  const visible_players = penalties_active
+    ? on_field_players.length === 2 ? on_field_players : []
+    : on_field_players
   const ball = state.ball ?? protocol_state?.ball
   return (
     <svg className="match-pitch" viewBox="0 0 1296 622" role="img" aria-label="Cancha del partido con las posiciones de los jugadores y la pelota">
@@ -29,7 +33,7 @@ export default function MatchPitch({ state, protocol_state }) {
         <circle cx="648" cy="311" r="69" />
         <circle className="match-pitch-center" cx="648" cy="311" r="5" />
       </g>
-      {players.filter((player) => player.on_field && player.position).map((player) => {
+      {visible_players.map((player) => {
         const point = project(player.position)
         const home = player.club_id === state.home_club.club_id
         const number = players.filter((item) => item.club_id === player.club_id).findIndex((item) => item.player_id === player.player_id) + 1
