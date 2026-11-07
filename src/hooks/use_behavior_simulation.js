@@ -1,60 +1,71 @@
 import {useEffect, useState} from 'react'
-import {connect_to_simulation_ticket} from '../api/behaviors.js'
+import {connect_to_simulation_ticket, create_simulation_ticket} from '../api/behaviors.js'
 
-export const useBehaviorSimulation = (ticketId) => {
+
+export const useBehaviorSimulation = (player_id, behavior_id) => {
   const [simulationData, setSimulationData] = useState(null)
   const [connectionStatus, setConnectionStatus] = useState('connecting') // 'connecting', 'online', 'offline'
   const [error, setError] = useState(null)
   
   useEffect(() => {
     // Si no hay ticketId no se conecta
-    if (!ticketId) {
+    if (!player_id || !behavior_id) {
       setConnectionStatus('offline')
       return 
     }
     // uso active para evitar actualizar el estado si el componente se desmonta antes de recibir datos
     let active = true
-    setConnectionStatus('connecting')
-    setSimulationData(null)
-    setError(null)
-    const socket = connect_to_simulation_ticket(ticketId)
-    socket.onopen = () => {
-      if (active) setConnectionStatus('online')
-    }
-    // Escucha los mensajes
-    socket.onmessage = (event) => {
+    let socket = null
+    async function start_simulation() {
       try {
+        setConnectionStatus('connecting')
+        setSimulationData(null)
+        setError(null)
+        const response = await create_simulation_ticket(player_id, behavior_id)
         if (!active) return
-        const data = JSON.parse(event.data)
-        console.log('Mensaje recibido del WebSocket:', data)
-        //
-        if (data.type === 'tick') {
-          // Guarda los datos de la simulación en el estado
-          setSimulationData(data)
-          return
+        socket = connect_to_simulation_ticket(response.ticket)
+        socket.onopen = () => {
+          if (active) setConnectionStatus('online')
         }
-        if (data.type === 'error') {
-          setError(data.message || 'Error desconocido en la simulación')
-          return
+        // Escucha los mensajes
+        socket.onmessage = (event) => {
+          if (!active) return
+          const data = JSON.parse(event.data)
+          if (data.type === 'tick') {
+            // Guarda los datos de la simulación en el estado
+            setSimulationData(data)
+            return
+          }
+          if (data.type === 'error') {
+            setError(data.message || 'Error desconocido en la simulación')
+            return
+          }
+        }
+        socket.onerror = (event) => {
+          console.error('WebSocket error:', event)
+          if (active) setConnectionStatus('offline')
+        }
+        // al cerrar la conexión, cambia el estado a offline
+        socket.onclose = () => {
+          if (active) setConnectionStatus('offline')
+        }
+
+      } catch (error) {
+        console.error('Error starting simulation:', error)
+        if (active) {
+          setError(error)
+          setConnectionStatus('offline')
         }
       }
-      catch (error) {
-        console.error('Error parsing simulation data:', error)
-        setError(error)
-      }
     }
-    socket.onerror = (event) => {
-      console.error('WebSocket error:', event)
-      if (active) setConnectionStatus('offline')
-    }
-    // al cerrar la conexión, cambia el estado a offline
-    socket.onclose = () => {
-      if (active) setConnectionStatus('offline')
-    }
+    start_simulation()
     return () => {
       active = false
-      socket.close() // cierra la conexión al desmontar el componente o cambiar de ticketId
+      if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)){
+        // cierra la conexion si esta abierta o abriendose. Evita forzar cierres abruptos
+        socket.close()
+      }
     }
-  }, [ticketId])
+  }, [player_id, behavior_id])
   return {simulationData, connectionStatus, error}
 }

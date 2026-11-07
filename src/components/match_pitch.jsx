@@ -32,8 +32,11 @@ export default function MatchPitch({ state, protocol_state }) {
         const home = player.club_id === state.home_club.club_id
         const number = players.filter((item) => item.club_id === player.club_id).findIndex((item) => item.player_id === player.player_id) + 1
         return (
-          <g key={player.player_id} className={`match-pitch-player match-pitch-player--${home ? 'home' : 'away'}`} transform={`translate(${point.x} ${point.y})`}>
-            <title>{player.name} · {home ? state.home_club.name : state.away_club.name}{player.has_ball ? ' · Con pelota' : ''}</title>
+          <g key={player.player_id} className={
+              `match-pitch-player match-pitch-player--${home ? 'home' : 'away'} ${player.is_selected ? 'match-pitch-player--selected' : ''}`
+            } transform={`translate(${point.x} ${point.y})`}>
+            <title>{player.name} · {home ? state.home_club.name : state.away_club.name}{player.is_selected ? ' · Jugador simulado' : ''}{player.has_ball ? ' · Con pelota' : ''}</title>
+            {player.is_selected && <circle className="match-pitch-selected-ring" r="34" />}
             {player.has_ball && <circle className="match-possession-ring" r="30" />}
             <circle r="24" />
             <text textAnchor="middle" dy=".35em">{number}</text>

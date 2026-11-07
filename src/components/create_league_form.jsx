@@ -154,16 +154,10 @@ export default function CreateLeagueForm({ onCancel }) {
   //
   const handle_preview = async(slot) => {
     setServer_error(null);
-    try {
-      const response = await create_simulation_ticket(slot.playerId,slot.behaviorId);
-      setPreview_selection({
-        playerId: slot.playerId,
-        behaviorId: slot.behaviorId,
-        ticketId: response.ticket,
-      });
-    } catch (error) {
-      setServer_error(get_error_message(error));
-    }
+    setPreview_selection({
+      playerId: slot.playerId,
+      behaviorId: slot.behaviorId,
+    });
   };
 
   // Caso de éxito: informa que la liga fue creada y muestra el código para unirse
@@ -197,8 +191,8 @@ export default function CreateLeagueForm({ onCancel }) {
     <>
     {preview_selection && (
     <MiniPitchViewer
-      ticketId={preview_selection.ticketId}
-      playerId={preview_selection.playerId}
+      player_id={preview_selection.playerId}
+      behavior_id={preview_selection.behaviorId}
       onClose={() => setPreview_selection(null)}
     />
     )}

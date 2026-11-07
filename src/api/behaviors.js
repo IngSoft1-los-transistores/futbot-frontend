@@ -29,9 +29,9 @@ export function create_simulation_ticket(player_id, behavior_id, options = {}) {
   )
 }
 
-export function connect_to_simulation_ticket(ticket_id) {
+export function connect_to_simulation_ticket(ticket) {
   const base = import.meta.env.VITE_WS_URL || API_URL.replace(/^http/, 'ws')
   // /ws/simulate?ticket=<ticket>
-  const ws = new WebSocket(`${base.replace(/\/$/, '')}/ws/simulate?ticket=${encodeURIComponent(ticket_id)}`)
+  const ws = new WebSocket(`${base.replace(/\/$/, '')}/ws/simulate?ticket=${encodeURIComponent(ticket)}`)
   return ws
 }

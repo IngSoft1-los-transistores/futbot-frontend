@@ -30,9 +30,6 @@ export default function SquadSelector({ players, behaviors, squad, setSquad, onP
         const can_preview =
             Boolean(currentSlot.playerId) &&
             Boolean(currentSlot.behaviorId);
-        console.log('slot actual:', currentSlot);
-        console.log('playersid:', currentSlot.playerId);
-        console.log('behaviorsid:', currentSlot.behaviorId);
         return (
       <div key={`${type}-${index}`} className="slot-card">
         <h6 className="fw-bold">{label} {index + 1}</h6>

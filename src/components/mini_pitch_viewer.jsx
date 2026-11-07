@@ -17,16 +17,17 @@ function normalize_simulation_position(position) {
 }
 
 
-function to_pitch_state(tick, playerId) {
+function to_pitch_state(tick, player_id) {
   // Sino hay tick o no hay jugadores devuelvo null para que el componente no intente renderizar nada
   if (!tick || !tick.players) return null;
 
   const players = tick.players.map((player) => ({
     player_id: String(player.id),
     club_id: player.team === 'HOME' ? 'home' : 'away',
-    name: String(player.id) === String(playerId) 
+    name: String(player.id) === String(player_id) 
       ? 'Jugador seleccionado' 
       : 'Rival estatico',
+    is_selected: String(player.id) === String(player_id),
     on_field: true,
     has_ball: String(player.id) === String(tick.ball?.owner_id),
     position: normalize_simulation_position(player.position),
@@ -39,10 +40,10 @@ function to_pitch_state(tick, playerId) {
   }
 }
 
-export default function MiniPitchViewer({ ticketId, playerId, onClose }) {
-  const { simulationData, connectionStatus, error } = useBehaviorSimulation(ticketId)
+export default function MiniPitchViewer({ player_id, behavior_id, onClose }) {
+  const { simulationData, connectionStatus, error } = useBehaviorSimulation(player_id, behavior_id)
   const is_loading = connectionStatus === 'connecting' && !simulationData
-  const pitch_state = simulationData?.type === 'tick' ? to_pitch_state(simulationData, playerId) : null;
+  const pitch_state = simulationData?.type === 'tick' ? to_pitch_state(simulationData, player_id) : null;
 
   return (
   <div className="mini-pitch-viewer">

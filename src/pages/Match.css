@@ -65,3 +65,16 @@
   .match-pitch { border-radius: 10px; }
   .match-panel { padding: 12px; }
 }
+.match-pitch-selected-ring {
+  fill: none;
+  stroke: #ffd166;
+  stroke-width: 4;
+  stroke-dasharray: 6 4;
+  animation: match-pitch-selected-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes match-pitch-selected-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
