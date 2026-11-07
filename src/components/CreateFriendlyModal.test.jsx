@@ -1,8 +1,11 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render as renderComponent, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import CreateFriendlyModal from './CreateFriendlyModal'
 import * as friendlyApi from '../api/friendly'
+
+const render = (ui) => renderComponent(ui, { wrapper: MemoryRouter })
 
 // Mock de las funciones de la API
 vi.mock('../api/friendly', () => ({
