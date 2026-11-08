@@ -50,6 +50,14 @@ export default function OngoingLeagueLobbyView() {
                 </button>
             </header>
 
+            {/* Aviso especial si la liga ha finalizado */}
+            {status === 'finished' && (
+                <div className="bg-[#164e2c] border border-[#2f5a36] p-4 rounded-md text-center text-white my-4">
+                    <h2 className="text-lg font-bold text-[#bf9548]">🏆 ¡El torneo ha finalizado!</h2>
+                    <p className="text-sm text-[#b5c2b3] mt-1">Consulta la tabla de posiciones definitiva y el historial completo del calendario.</p>
+                </div>
+            )}
+            
             <div className="lobby-grid">
                 {/* Partido en Disputa */}
                 <section className="match-card">
