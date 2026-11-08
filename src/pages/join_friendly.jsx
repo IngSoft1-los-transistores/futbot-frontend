@@ -3,7 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { join_friendly_room, list_behaviors, list_players } from '../api/client'
 import { read_session } from '../auth/session'
 import SquadSelector from '../components/SquadSelector'
-import { is_squad_complete } from '../components/squad'
+import { empty_squad, is_squad_complete } from '../components/squad'
+import MiniPitchViewer from '../components/mini_pitch_viewer'
 import './Home.css'
 import './join_friendly.css'
 
@@ -61,6 +62,8 @@ export default function JoinFriendly() {
   const [attempt, set_attempt] = useState(0)
   const [submitting, set_submitting] = useState(false)
   const [notice, set_notice] = useState(null)
+  const [change_open, set_change_open] = useState(false)
+  const [preview_selection, set_preview_selection] = useState(null)
 
   useEffect(() => {
     if (!read_session()) {
@@ -147,6 +150,13 @@ export default function JoinFriendly() {
         : 'No se pudo conectar con el servidor. Verificá tu conexión e intentá nuevamente.',
     })
   }
+  
+  function handle_preview(slot) {
+    set_preview_selection({
+      player_id: slot.playerId,
+      behavior_id: slot.behaviorId,
+    })
+  }
 
   async function confirm() {
     if (!is_complete || submitting) return
@@ -178,6 +188,13 @@ export default function JoinFriendly() {
 
   return (
     <div className="home-page">
+      {preview_selection && (
+      <MiniPitchViewer
+        player_id={preview_selection.player_id}
+        behavior_id={preview_selection.behavior_id}
+        onClose={() => set_preview_selection(null)}
+      />
+      )}
       <main className="home-content">
         <section className="home-welcome" aria-labelledby="join-title">
           <h1 id="join-title">Unirse a amistoso</h1>
@@ -218,7 +235,14 @@ export default function JoinFriendly() {
                 Seleccioná 3 titulares y 3 suplentes. Cada puesto necesita un jugador y un comportamiento.
                 Un jugador no puede ocupar dos puestos.
               </p>
-              <SquadSelector players={players} behaviors={behaviors} squad={squad} setSquad={set_squad} />
+
+              <SquadSelector
+                players={players}
+                behaviors={behaviors}
+                squad={squad}
+                setSquad={set_squad}
+                onPreview={handle_preview}
+              />
             </section>
 
             <div className="join-row">

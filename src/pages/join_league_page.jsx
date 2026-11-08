@@ -15,6 +15,7 @@ import Modal from '../components/modal'
 import SquadSelector from '../components/SquadSelector'
 import { empty_squad, is_squad_complete } from '../components/squad'
 import { useLeaguesSocket } from '../hooks/use_leagues_socket'
+import MiniPitchViewer from '../components/mini_pitch_viewer'
 import './Home.css'
 import './join_friendly.css'
 import './join_league_page.css'
@@ -113,6 +114,7 @@ export default function JoinLeaguePage() {
   const [closed_reason, set_closed_reason] = useState(null)
   const [password, set_password] = useState('')
   const password_ref = useRef(null)
+  const [preview_selection, set_preview_selection] = useState(null)
 
   const refresh_league = useCallback((listed) => {
     set_league((current) => apply_league_list(current, listed))
@@ -187,6 +189,13 @@ export default function JoinLeaguePage() {
   const clean_password = password.trim()
   const can_confirm = is_complete && (!needs_password || clean_password !== '')
 
+  function handle_preview(slot) {
+    set_preview_selection({
+      player_id: slot.playerId,
+      behavior_id: slot.behaviorId,
+    })
+  }
+
   async function confirm() {
     if (!can_confirm || submitting) return
 
@@ -213,6 +222,13 @@ export default function JoinLeaguePage() {
 
   return (
     <div className="home-page">
+      {preview_selection && (
+      <MiniPitchViewer
+        player_id={preview_selection.player_id}
+        behavior_id={preview_selection.behavior_id}
+        onClose={() => set_preview_selection(null)}
+      />
+      )}
       <main className="home-content" aria-busy={load_status === 'loading'}>
         <section className="home-welcome" aria-labelledby="join-league-title">
           <h1 id="join-league-title">Unirse a liga</h1>
@@ -291,6 +307,7 @@ export default function JoinLeaguePage() {
                       behaviors={behaviors}
                       squad={squad}
                       setSquad={set_squad}
+                      onPreview={handle_preview}
                     />
                   </fieldset>
                 </section>

@@ -3,6 +3,7 @@ import { useState , useEffect } from "react"
 import { createFriendlyRoom , getMyPlayers , getMyBehaviors } from "../api/friendly"
 import SquadSelector from './SquadSelector'
 import './CreateFriendlyModal.css'
+import MiniPitchViewer from './mini_pitch_viewer'
 
 export default function CreateFriendlyModal({ isOpen, onClose }) {
     const navigate = useNavigate()
@@ -17,6 +18,15 @@ export default function CreateFriendlyModal({ isOpen, onClose }) {
     })
 
     const [createdRoom, setCreatedRoom] = useState(null)
+
+    const [preview_selection, set_preview_selection] = useState(null)
+
+    function handle_preview(slot) {
+      set_preview_selection({
+        player_id: slot.playerId,
+        behavior_id: slot.behaviorId,
+      })
+    }
 
     useEffect(() => {
         if (!isOpen) return
@@ -41,7 +51,7 @@ export default function CreateFriendlyModal({ isOpen, onClose }) {
     const handleCreateFriendly = async () => {
         setError(null)
         setLoading(true)
-
+        
         const payload = {
             starters: squad.starters.map((s) => ({
                 player_id: String(s.playerId),
@@ -81,6 +91,13 @@ export default function CreateFriendlyModal({ isOpen, onClose }) {
 
     return (
     <div className="modal-overlay" onClick={onClose}>
+      {preview_selection && (
+        <MiniPitchViewer
+          player_id={preview_selection.player_id}
+          behavior_id={preview_selection.behavior_id}
+          onClose={() => set_preview_selection(null)}
+        />
+      )}
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h1 className="text">Crear Partido Amistoso</h1>
@@ -107,6 +124,7 @@ export default function CreateFriendlyModal({ isOpen, onClose }) {
               behaviors={behaviors}
               squad={squad}
               setSquad={setSquad}
+              onPreview={handle_preview}
             />
             <div className="modal-actions">
               <button
