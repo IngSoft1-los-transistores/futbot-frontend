@@ -61,9 +61,12 @@ export const useBehaviorSimulation = (player_id, behavior_id) => {
     start_simulation()
     return () => {
       active = false
-      if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)){
-        // cierra la conexion si esta abierta o abriendose. Evita forzar cierres abruptos
-        socket.close()
+      // Verificamos que socket exista y que socket.close sea realmente una función
+      if (socket && typeof socket.close === 'function') {
+        // 0 = CONNECTING, 1 = OPEN (Estándar W3C WebSocket)
+        if (socket.readyState === 0 || socket.readyState === 1) {
+          socket.close()
+        }
       }
     }
   }, [player_id, behavior_id])
