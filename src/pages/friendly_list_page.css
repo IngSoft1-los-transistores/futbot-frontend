@@ -57,3 +57,32 @@
 .friendly-item .home-action {
   align-self: flex-start;
 }
+
+.friendly-search {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.friendly-search label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #d8f0d8;
+}
+
+.friendly-search input {
+  min-width: 240px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #fff3;
+  background: #0b2a16cc;
+  color: white;
+  font: inherit;
+}
+
+.friendly-count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+}

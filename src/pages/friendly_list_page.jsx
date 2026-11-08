@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { list_public_friendly_rooms } from '../api/client'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { read_session } from '../auth/session'
 import Spinner from '../components/atoms/spinner'
+import { usePublicFriendlySocket } from '../hooks/use_public_friendly_socket'
 import './Home.css'
 import './friendly_list_page.css'
 
@@ -13,16 +13,18 @@ const STATUS_LABELS = {
   finished: 'Finalizada',
 }
 
-const date_format = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' })
+const date_format = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short', hour12: false })
+
+const normalize = (text) => text.trim().toLocaleLowerCase('es')
 
 export default function FriendlyListPage() {
   const navigate = useNavigate()
-  const [rooms, set_rooms] = useState([])
-  const [status, set_status] = useState('loading')   // loading | ready | error
-  const [error, set_error] = useState('')
-  const [attempt, set_attempt] = useState(0)         // subirlo fuerza una nueva consulta
+  const location = useLocation()
+  const squad = location.state?.squad ?? null          // plantilla de un intento anterior (sala ocupada)
+  const { rooms, connection } = usePublicFriendlySocket()
+  const [search_text, set_search_text] = useState('')
 
-  // Sin sesión no hay nada que mostrar; si vence mientras tanto, vuelve al login
+  // Sin sesión no hay nada que mostrar; si vence o el canal rechaza el token, vuelve al login
   useEffect(() => {
     if (!read_session()) {
       navigate('/login', { replace: true })
@@ -33,70 +35,89 @@ export default function FriendlyListPage() {
     return () => window.removeEventListener('futbot:unauthorized', unauthorized)
   }, [navigate])
 
-  // Consulta el listado al entrar y cada vez que se pide actualizar
-  useEffect(() => {
-    if (!read_session()) return
-    const controller = new AbortController()
-    list_public_friendly_rooms({ signal: controller.signal })
-      .then((loaded) => {
-        if (controller.signal.aborted) return
-        set_rooms(loaded)
-        set_error('')
-        set_status('ready')
-      })
-      .catch((cause) => {
-        if (controller.signal.aborted || cause.name === 'AbortError') return
-        if (cause.status === 401) {
-          navigate('/login', { replace: true })
-          return
-        }
-        set_error(cause.status ? cause.message : 'No se pudo conectar con el servidor.')
-        set_status('error')
-      })
-    return () => controller.abort()
-  }, [attempt, navigate])
+  const loading = rooms === null
+  const query = search_text.trim()
 
-  function reload() {
-    set_status('loading')
-    set_attempt((current) => current + 1)
-  }
+  // El filtro se aplica sobre lo último que mandó el servidor: cada cambio en vivo lo respeta
+  const visible = useMemo(() => {
+    if (!rooms) return []
+    const needle = normalize(search_text)
+    if (!needle) return rooms
+    return rooms.filter((room) => normalize(room.home_club_name).includes(needle))
+  }, [rooms, search_text])
 
   // Si la sala ya no está disponible, lo informa el endpoint de unión (pantalla siguiente)
   function join(room) {
-    navigate('/friendly/join', { state: { room_id: room.id, home_club_name: room.home_club_name } })
+    navigate('/friendly/join', { state: { room_id: room.id, home_club_name: room.home_club_name, squad } })
   }
 
   return (
     <div className="home-page">
-      <main className="home-content" aria-busy={status === 'loading'}>
+      <main className="home-content" aria-busy={loading}>
         <section className="home-welcome" aria-labelledby="friendly-title">
           <h1 id="friendly-title">Amistosos disponibles</h1>
-          <p>Elegí una sala en espera de rival y unite con tu equipo.</p>
+          <p>Elegí una sala en espera de rival y unite con tu equipo. El listado se actualiza solo.</p>
           <div className="friendly-row">
             <button className="home-action" onClick={() => navigate('/home')}>Volver</button>
-            <button className="home-action" onClick={reload} disabled={status === 'loading'}>Actualizar</button>
           </div>
         </section>
 
-        {status === 'loading' && (
+        {squad && (
+          <p className="home-notice" role="note">
+            Tu plantilla se conserva: elegí otra sala para unirte con ella.
+          </p>
+        )}
+
+        {!loading && (
+          <form className="friendly-search" role="search" onSubmit={(event) => event.preventDefault()}>
+            <div>
+              <label htmlFor="friendly-name">Buscar por nombre del club</label>
+              <input
+                id="friendly-name"
+                type="search"
+                value={search_text}
+                onChange={(event) => set_search_text(event.target.value)}
+                placeholder="Nombre del club local"
+                maxLength={80}
+                autoComplete="off"
+              />
+            </div>
+            {search_text && (
+              <button type="button" className="home-action" onClick={() => set_search_text('')}>Limpiar</button>
+            )}
+          </form>
+        )}
+
+        {connection === 'offline' && (
+          <p className="home-notice home-error" role="alert">
+            Sin conexión con el servidor. Reintentando…
+          </p>
+        )}
+
+        {loading && (
           <div className="home-notice friendly-loading" role="status">
             <Spinner />
             Cargando amistosos…
           </div>
         )}
 
-        {status === 'error' && <>
-          <p className="home-notice home-error" role="alert">{error}</p>
-          <button className="home-action" onClick={reload}>Reintentar</button>
-        </>}
-
-        {status === 'ready' && rooms.length === 0 && (
-          <p className="home-notice" role="status">No hay amistosos disponibles.</p>
+        {!loading && visible.length === 0 && (
+          <p className="home-notice" role="status">
+            {rooms.length === 0
+              ? 'No hay amistosos disponibles.'
+              : `No hay amistosos que coincidan con "${query}".`}
+          </p>
         )}
 
-        {status === 'ready' && rooms.length > 0 && (
+        {!loading && query && visible.length > 0 && (
+          <p className="friendly-count" role="status">
+            {visible.length} de {rooms.length} {rooms.length === 1 ? 'sala' : 'salas'}
+          </p>
+        )}
+
+        {!loading && visible.length > 0 && (
           <ul className="friendly-list">
-            {rooms.map((room) => {
+            {visible.map((room) => {
               const club = room.home_club_name || 'Club sin nombre'
               return (
                 <li key={room.id} className="friendly-item">

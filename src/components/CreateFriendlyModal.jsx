@@ -55,7 +55,12 @@ export default function CreateFriendlyModal({ isOpen, onClose }) {
 
         try {
             const roomData = await createFriendlyRoom(payload)
-            setCreatedRoom(roomData)
+            const roomID = roomData?.roomId || roomData?.room_id
+            if (!roomID) {
+                setError('El servidor no devolvió el ID de la sala.')
+                return
+            }
+            navigate(`/amistosos/${roomID}/sala`)
         } catch (err) {
             let errorMsg = 'No fue posible crear amistoso.'
             const detailObj = err.detail || err.message
@@ -85,12 +90,11 @@ export default function CreateFriendlyModal({ isOpen, onClose }) {
 
         {createdRoom ? (
           <div className="modal-success-box">
-            <h3>¡Amistoso Creado Exitosamente!</h3>
-            <p>Comparte la siguiente información con tu rival:</p>
-            <div className="room-info">
-              <div><strong>Código de Sala:</strong> <span className="room-code">{createdRoom.roomCode || createdRoom.room_code}</span></div>
-              <div><small>ID: {createdRoom.roomId || createdRoom.room_id}</small></div>
-            </div>
+            <h3>¡Amistoso creado!</h3>
+            <p>
+              Tu sala ya aparece en el listado público de amistosos. Cuando otro club se una,
+              podrás iniciar el partido.
+            </p>
             <button className="home-action" onClick={() => {
               const roomID = createdRoom.roomId || createdRoom.room_id
               navigate(`/amistosos/${roomID}/sala`)}}>INICIAR</button>
