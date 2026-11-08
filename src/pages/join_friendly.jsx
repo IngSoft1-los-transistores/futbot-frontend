@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { join_friendly_room, list_behaviors, list_players } from '../api/client'
 import { read_session } from '../auth/session'
 import SquadSelector from '../components/SquadSelector'
+import { is_squad_complete } from '../components/squad'
 import './Home.css'
 import './join_friendly.css'
 
@@ -15,15 +16,6 @@ const all_slots = (team) => [...team.starters, ...team.substitutes]
 
 const has_selection = (team) =>
   all_slots(team).some((slot) => slot.playerId !== '' || slot.behaviorId !== '')
-
-function is_squad_complete(team) {
-  const slots = all_slots(team)
-  return (
-    slots.length === 6 &&
-    slots.every((slot) => slot.playerId !== '' && slot.playerId != null && slot.behaviorId !== '' && slot.behaviorId != null) &&
-    new Set(slots.map((slot) => String(slot.playerId))).size === 6
-  )
-}
 
 const to_selection = (slot) => ({ player_id: String(slot.playerId), behavior_id: String(slot.behaviorId) })
 

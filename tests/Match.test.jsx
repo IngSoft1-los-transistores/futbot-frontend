@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import Match from '../src/pages/Match'
@@ -13,7 +13,13 @@ const snapshot = (changes = {}) => ({
   home_club: { club_id: 'home', name: 'Local FC' }, away_club: { club_id: 'away', name: 'Visitante FC' },
   score: { home: 0, away: 0 }, current_time: 5, remaining_time: 295,
   ball: { x: 10, y: 20, owner_player_id: null },
-  players: [{ player_id: 'p1', club_id: 'home', name: 'Ana', behavior_id: 'b1', on_field: true, has_ball: false, position: { x: 5, y: 3 } }],
+  players: [
+    { player_id: 'p1', club_id: 'home', name: 'Jugador 01', behavior_id: 'b1', on_field: true, has_ball: false, position: { x: 5, y: 3 } },
+    { player_id: 'p2', club_id: 'home', name: 'Jugador 02', behavior_id: 'b1', behavior_name: 'Volante', on_field: true, has_ball: false, position: { x: 8, y: 4 } },
+    { player_id: 'p3', club_id: 'home', name: 'Jugador 03', behavior_id: 'b1', behavior_name: 'Defensor', on_field: true, has_ball: false, position: { x: 10, y: 6 } },
+    { player_id: 'p4', club_id: 'home', name: 'Jugador 04', behavior_id: 'b1', behavior_name: 'Arquero', on_field: false, has_ball: false, position: null },
+    { player_id: 'p5', club_id: 'home', name: 'Jugador 05', behavior_id: 'b1', behavior_name: 'Delantero', on_field: false, has_ball: false, position: null },
+  ],
   actions: [], ...changes,
 })
 const mount = () => render(<MemoryRouter initialEntries={['/matches/match-1']}><Routes>
@@ -92,6 +98,108 @@ describe('Estado del partido por WebSocket', () => {
     expect(sockets[0].close).toHaveBeenCalled()
     await tick(60000)
     expect(connect_match_state).toHaveBeenCalledTimes(1)
+  })
+
+  it('mantiene disponible la acción de sustituir durante un partido en juego', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state({ status: 'in_progress' }) })
+    expect(screen.getByRole('button', { name: 'Sustituir' })).toBeEnabled()
+    await emit(() => sockets[0].state({ revision: 2, status: 'paused' }))
+    expect(screen.getByRole('button', { name: 'Sustituir' })).toBeEnabled()
+  })
+
+  it('envía la solicitud y muestra el cambio planificado al recibir el evento WebSocket', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Sustituir' })))
+    await emit(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Jugador 01/ }))
+      fireEvent.click(screen.getByRole('button', { name: /Jugador 04/ }))
+    })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: /Confirmar cambio/ })))
+    expect(sockets[0].send).toHaveBeenCalledWith(JSON.stringify({
+      type: 'SUBSTITUTE_PLAYER', outPlayerId: 'p1', inPlayerId: 'p4',
+    }))
+
+    await emit(() => sockets[0].message({
+      type: 'SUBSTITUTION_SCHEDULED', team: 'home', outPlayerId: 'p1', inPlayerId: 'p4',
+    }))
+    expect(screen.getByText(/Cambio planificado para la próxima pausa:/)).toBeInTheDocument()
+    expect(document.querySelector('.substitution-scheduled')).toHaveTextContent('Jugador 01 por Jugador 04')
+    expect(screen.getByText('Sustitución planificada para la siguiente pausa')).toBeInTheDocument()
+  })
+
+  it('bloquea el envío al agotar el cupo de la pausa y lo restablece al reanudar', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state({ status: 'paused' }) })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Sustituir' })))
+    await emit(() => sockets[0].message({
+      type: 'SUBSTITUTION_APPLIED', team: 'home', outPlayerId: 'p1', inPlayerId: 'p4',
+    }))
+    expect(screen.getByText('Límite alcanzado: 1 cambio por pausa')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Confirmar cambio/ })).toBeDisabled()
+
+    const starter_list = screen.getByRole('region', { name: 'Titular que sale' })
+    const substitute_list = screen.getByRole('region', { name: 'Suplente que entra' })
+    expect(within(starter_list).getByRole('button', { name: /Jugador 04/ })).toBeInTheDocument()
+    expect(within(substitute_list).getByRole('button', { name: /Jugador 01/ })).toBeInTheDocument()
+    await emit(() => {
+      fireEvent.click(within(starter_list).getByRole('button', { name: /Jugador 04/ }))
+      fireEvent.click(within(substitute_list).getByRole('button', { name: /Jugador 01/ }))
+    })
+    expect(screen.getByRole('button', { name: /Confirmar cambio/ })).toBeDisabled()
+
+    await emit(() => sockets[0].message({ type: 'MATCH_RESUMED' }))
+    expect(screen.queryByText('Límite alcanzado: 1 cambio por pausa')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Confirmar cambio/ })).toBeEnabled()
+  })
+
+  it('solo muestra eventos de sustitución del equipo propio y no limpia su solicitud', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Sustituir' })))
+    await emit(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Jugador 01/ }))
+      fireEvent.click(screen.getByRole('button', { name: /Jugador 04/ }))
+    })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: /Confirmar cambio/ })))
+
+    await emit(() => sockets[0].message({
+      type: 'SUBSTITUTION_SCHEDULED', team: 'away', outPlayerId: 'a1', inPlayerId: 'a4',
+    }))
+    await emit(() => sockets[0].message({
+      type: 'SUBSTITUTION_APPLIED', team: 'away', outPlayerId: 'a1', inPlayerId: 'a4',
+    }))
+    await emit(() => sockets[0].message({
+      type: 'error', team: 'away', error_code: 'SUBSTITUTION_LIMIT_REACHED', message: 'Límite rival',
+    }))
+
+    expect(screen.getByRole('button', { name: /Enviando/ })).toBeInTheDocument()
+    expect(document.querySelector('.substitution-scheduled')).toBeNull()
+    expect(document.querySelector('.substitution-limit')).toBeNull()
+    expect(document.querySelector('.substitution-error')).toBeNull()
+    expect(screen.queryByText('Sustitución planificada para la siguiente pausa')).not.toBeInTheDocument()
+    expect(screen.queryByText('Sustitución efectuada')).not.toBeInTheDocument()
+  })
+
+  it('detecta el límite por error_code y no por la redacción del mensaje', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state({ status: 'paused' }) })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Sustituir' })))
+    await emit(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Jugador 01/ }))
+      fireEvent.click(screen.getByRole('button', { name: /Jugador 04/ }))
+    })
+    await emit(() => sockets[0].message({
+      type: 'error',
+      team: 'home',
+      error_code: 'SUBSTITUTION_LIMIT_REACHED',
+      message: 'El cupo disponible ya fue utilizado',
+    }))
+
+    expect(document.querySelector('.substitution-limit')).toHaveTextContent('Límite alcanzado')
+    expect(document.querySelector('.substitution-error')).toHaveTextContent('El cupo disponible ya fue utilizado')
+    expect(screen.getByRole('button', { name: /Confirmar cambio/ })).toBeDisabled()
   })
 
   it('conserva el último estado al desconectarse y recupera el snapshot al reconectar', async () => {

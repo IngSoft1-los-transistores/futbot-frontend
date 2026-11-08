@@ -8,7 +8,6 @@ const session = {
 }
 
 const ROOM_ID = '11111111-1111-4111-8111-111111111111'
-const OTHER_ROOM_ID = '22222222-2222-4222-8222-222222222222'
 
 
 const players = [
@@ -135,18 +134,6 @@ async function seed_session(page) {
       ),
     session,
   )
-}
-
-async function open_home(page) {
-  await seed_session(page)
-
-  await page.goto('/home')
-
-  await expect(
-    page.getByRole('heading', {
-      name: 'Menú principal',
-    }),
-  ).toBeVisible()
 }
 
 async function open_join_page(page, club = 'Racing del Sur') {

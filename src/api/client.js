@@ -160,7 +160,6 @@ export async function list_behaviors(options = {}) {
 }
 
 // Convierte el equipo del frontend al formato usado por el endpoint /join.
-// Conservamos el contrato actual: titulares, suplentes, playerId y behaviorId.
 export function join_friendly_room({
   room_id,
   starters,
