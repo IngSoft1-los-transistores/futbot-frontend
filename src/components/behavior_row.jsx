@@ -11,51 +11,42 @@ function BehaviorRow({ name, code, isDefault, onDetails, onEdit, onDelete }) {
                 </p>
             </div>
 
-            {/* Tipo (Preprogramado/propio), Botónes */}
-            <div className="w-[340px] flex items-center justify-between gap-3">
+            {/* Tipo y Botones de acción con ancho expandido para evitar desbordes */}
+            <div className="w-[390px] flex items-center justify-between gap-2 shrink-0">
                 {/* Tipo */}
-                <div className="flex items-center gap-2 border border-green-800/50 bg-[#0c1610] px-3 py-1 rounded-full text-xs text-gray-300 w-36 shrink-0">
+                <div className="flex items-center gap-2 border border-green-800/50 bg-[#0c1610] px-3 py-1 rounded-full text-xs text-gray-300 w-32 shrink-0">
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDefault ? 'bg-[#f0a95b]' : 'bg-blue-500'}`}></span>
                     <span className="truncate">{isDefault ? 'Preprogramado' : 'Propio'}</span>
                 </div>
-                {/* Botónes  */}
-                <div className="flex items-center gap-2">
+
+                {/* Grupo de Botones */}
+                <div className="flex items-center gap-1.5">
                     <button 
-                        className="border border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b] px-3 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
+                        className="border border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b] px-2.5 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
                         onClick={onDetails}
                     >
                         Ver detalles
                     </button>
 
                     {!isDefault && (
-                        <button
-                            className="border border-red-800/80 text-red-400 hover:bg-red-900/40 px-3 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
-                            onClick={onDelete}
-                        >
-                            Eliminar
-                        </button>
+                        <>
+                            <button 
+                                type="button"
+                                onClick={onEdit}
+                                className="border border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b] px-2.5 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
+                            >
+                                Editar
+                            </button>
+
+                            <button
+                                className="border border-red-800/80 text-red-400 hover:bg-red-900/40 px-2.5 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
+                                onClick={onDelete}
+                            >
+                                Eliminar
+                            </button>
+                        </>
                     )}
                 </div>
-                
-                {/* Botón Editar */}
-                <button 
-                    type="button"
-                    disabled={isDefault}
-                    title={
-                        isDefault 
-                          ? "No se puede editar un comportamiento preprogramado"
-                          : "Editar comportamiento"                        
-                    }
-                    onClick={onEdit}
-                    className={`px-3 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0 border ${
-                        isDefault 
-                            ? 'border-green-900/50 text-green-800 opacity-50 cursor-not-allowed' 
-                            : 'border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b]'
-                    }`}
-                >
-                    Editar
-                </button>
-              
             </div>
         </div>
     );
