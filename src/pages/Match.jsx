@@ -4,6 +4,7 @@ import { retry_match_start } from '../api/matches'
 import { read_session } from '../auth/session'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import useMatchState from '../hooks/use_match_state'
+import PauseBanner from '../components/pause_banner'
 import MatchPitch from '../components/match_pitch'
 import PenaltyShootout from '../components/PenaltyShootout'
 import LiveMatchControls from '../components/LiveMatchControls'
@@ -390,6 +391,11 @@ function MatchView({ match_id, room_behavior_names }) {
           protocol_state={protocol_state}
           penalties_active={protocol_state.penalties.active}
         />
+        <div className="match-pitch-stage">
+          {/* current_time is frozen during a pause, so the key only changes when a new pause starts. */}
+          {state.status === 'paused' && <PauseBanner key={`${state.phase}-${state.current_time}`} phase={state.phase} pause_duration={state.pause_duration} pause_remaining={state.pause_remaining} />}
+          <MatchPitch state={state} protocol_state={protocol_state} />
+        </div>
         <div className="match-pitch-footer"><Link to="/home">← Volver al menú</Link><span>Restante: <time>{time(state.remaining_time)}</time></span></div>
         <details className="match-details">
           <summary>Jugadores y acciones del partido</summary>

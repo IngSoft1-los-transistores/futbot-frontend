@@ -37,6 +37,7 @@
 .match-status--paused::before { background: #d49a53; }
 .match-status--finished::before { background: #b5c2b3; }
 .match-pitch { display: block; width: 100%; height: auto; aspect-ratio: 1296 / 622; background: #245a3a; border: 2px solid #f3ecdd66; box-shadow: 0 16px 32px #06160d70; border-radius: 18px; overflow: hidden; }
+.match-pitch-stage { position: relative; }
 .match-pitch-stripes { fill: #2b6542; opacity: .7; }
 .match-pitch-lines { fill: none; stroke: #f3ecdd; stroke-width: 3; }
 .match-pitch-goal { fill: #132d20; }
@@ -92,4 +93,17 @@
   .match-teams { grid-template-columns: 1fr; gap: 0; }
   .match-pitch { border-radius: 10px; }
   .match-panel { padding: 12px; }
+}
+.match-pitch-selected-ring {
+  fill: none;
+  stroke: #ffd166;
+  stroke-width: 4;
+  stroke-dasharray: 6 4;
+  animation: match-pitch-selected-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes match-pitch-selected-pulse {
+  50% {
+    opacity: 0.45;
+  }
 }
