@@ -39,3 +39,20 @@ export function resendVerification(email) {
     body: JSON.stringify({ email }),
   })
 }
+
+
+export function forgotPassword(email) {
+  return request('/api/auth/forgot-password', {
+    authenticated: false,
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
+
+export function resetPassword(token, newPassword) {
+  return request('/api/auth/reset-password', {
+    authenticated: false,
+    method: 'POST',
+    body: JSON.stringify({ token, newPassword }),
+  })
+}

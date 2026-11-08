@@ -6,9 +6,11 @@ import CreateFriendlyModal from '../components/CreateFriendlyModal'
 import Modal from '../components/modal';
 import CreatePlayerForm from '../components/create_player_form';
 import CreateLeagueForm from '../components/create_league_form';
+import ActiveRoomsModal from '../components/ActiveRoomsModal';
 
 import './Home.css'
-import JoinFriendlyModal from '../components/join_friendly_modal'
+
+import JoinPrivateLeagueModal from '../components/join_private_league_modal'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -16,11 +18,12 @@ export default function Home() {
   const [error, set_error] = useState('')
   const [attempt, set_attempt] = useState(0)
   const [closing, set_closing] = useState(false)
-  const [join_open, set_join_open] = useState(false)
   const [create_open, set_create_open] = useState(false)
+  const [private_league_open, set_private_league_open] = useState(false)
   const [show_form, setShow_form] = useState(false);
   const [show_success, setShow_success] = useState(false);
   const [show_league_form, setShow_league_form] = useState(false);
+  const [active_rooms_open, set_active_rooms_open] = useState(false);
 
   // Al crear el jugador se cierra el formulario y se muestra el pop-up de éxito
   const handle_success = () => {
@@ -95,10 +98,10 @@ export default function Home() {
     }
   }
 
-  function join_friendly({ room_id, code }) {
-    set_join_open(false)
-    // El código funciona como contraseña: va en el state de la navegación, no en la URL
-    navigate('/friendly/join', { state: { room_id, code } })
+  function join_private_league(league) {
+    set_private_league_open(false)
+    const league_id = encodeURIComponent(league.leagueId)
+    navigate(league.isEnrolled ? `/league/${league_id}/waiting` : `/ligas/${league_id}/unirse`)
   }
 
   return (
@@ -151,6 +154,33 @@ export default function Home() {
                   <input id="match_id" name="match_id" required placeholder="Ingresá el ID del partido" />
                   <button className="home-action" type="submit">Ver partido</button>
                 </form>
+              </article>
+
+              {/* Tarjeta de Club */}
+              <article className="home-card" aria-labelledby="home-card-club">
+                <div className="home-card-content">
+
+                  {/* Icono de club */}
+                  <div className="home-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                      <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
+                  </div>
+
+                  {/* Informacion de la tarjeta */}
+                  <div>
+                    <h2 id="home-card-club">Club</h2>
+                    <p>Perfil personal con informacion de usuario y gestión de tus salas activas.</p>
+                  </div>
+                </div>
+
+                {/* Boton de acceso */}
+                <div className="home-card-actions">
+                  <button className="home-action" onClick={() => set_active_rooms_open(true)}>
+                    VER SALAS ACTIVAS
+                  </button>
+                </div>
               </article>
 
 
@@ -224,8 +254,11 @@ export default function Home() {
                   <button className="home-action" onClick={() => set_create_open(true)}>
                     CREAR
                   </button>
-                  <button className="home-action" onClick={() => set_join_open(true)}>
+                  <Link to="/friendly" className="home-action">
                     Unirse a un amistoso
+                  </Link>
+                  <button className="home-action" onClick={() => set_private_league_open(true)}>
+                    Unirse a liga privada
                   </button>
                 </div>
               </article>
@@ -344,11 +377,17 @@ export default function Home() {
           </>
         )}
       </main>
-      <JoinFriendlyModal
-        open={join_open}
-        on_close={() => set_join_open(false)}
-        on_submit={join_friendly}
+      <ActiveRoomsModal
+        open={active_rooms_open}
+        onClose={() => set_active_rooms_open(false)}
       />
+
+      {private_league_open && (
+        <JoinPrivateLeagueModal
+          on_close={() => set_private_league_open(false)}
+          on_found={join_private_league}
+        />
+      )}
 
       <CreateFriendlyModal
         isOpen={create_open}
