@@ -111,7 +111,7 @@ function MatchView({ match_id, room_behavior_names }) {
     if (change_result) {
       if (change_result.ok) {
         set_change_open(false)
-        set_toast({ type: 'success', message: 'Comportamiento actualizado: rige desde el próximo tick' })
+        set_toast({ type: 'success', message: 'Comportamiento actualizado para el siguiente tick' })
       } else {
         set_toast({ type: 'error', message: change_result.message })
       }

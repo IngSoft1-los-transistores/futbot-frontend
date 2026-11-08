@@ -227,7 +227,7 @@ describe('Estado del partido por WebSocket', () => {
     await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
     await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Ana'), { target: { value: 'b2' } }))
     await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
-    await emit(() => sockets[0].message({ type: 'behavior_change_accepted', playerId: 'p1', behaviorId: 'b2' }))
+    await emit(() => sockets[0].message({ event: 'BEHAVIOR_CHANGED', payload: { playerId: 'p1', behaviorId: 'b2' } }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('Comportamiento actualizado')
   })
@@ -241,5 +241,14 @@ describe('Estado del partido por WebSocket', () => {
     await emit(() => sockets[0].message({ type: 'error', status: 404, message: 'Comportamiento no disponible' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Comportamiento no disponible')
     expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('ignora SUBSTITUTION_STATE sin romper la vista ni mostrar avisos', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => sockets[0].message({ type: 'SUBSTITUTION_STATE' }))
+    expect(screen.getByLabelText('Marcador: 0 a 0')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 })
