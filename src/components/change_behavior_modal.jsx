@@ -13,9 +13,10 @@ export default function ChangeBehaviorModal({ starters, behaviors, on_confirm, o
   return (
     <Modal title="Cambiar comportamiento" description="Rige desde el próximo tick" onClose={on_close}>
       {starters.map((p) => (
-        <label key={p.id} className="mb-3 block">
+        <label key={p.id} className="change-behavior-row">
           {p.name}
           <select
+            className="change-behavior-select"
             aria-label={`Comportamiento de ${p.name}`}
             value={selected_behaviors[p.id]}
             onChange={(e) => set_selected_behaviors({ ...selected_behaviors, [p.id]: e.target.value })}
@@ -27,10 +28,19 @@ export default function ChangeBehaviorModal({ starters, behaviors, on_confirm, o
           </select>
         </label>
       ))}
-      <button type="button" disabled={changes.length === 0} onClick={() => on_confirm(changes)}>
-        Confirmar
-      </button>
-      <button type="button" onClick={on_close}>Cancelar</button>
+      <div className="change-behavior-actions">
+        <button
+          type="button"
+          className="change-behavior-btn change-behavior-btn--primary"
+          disabled={changes.length === 0}
+          onClick={() => on_confirm(changes)}
+        >
+          Confirmar
+        </button>
+        <button type="button" className="change-behavior-btn" onClick={on_close}>
+          Cancelar
+        </button>
+      </div>
     </Modal>
   )
 }
