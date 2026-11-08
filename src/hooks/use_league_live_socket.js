@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { read_session } from '../auth/session';
 
-export function use_league_lobby_socket(league_id, token) {
+export function use_league_lobby_socket(league_id, prop_token) {
     const [lobby_data, set_lobby_data] = useState(null);
     const [loading, set_loading] = useState(true);
     const [error, set_error] = useState(null);
@@ -8,17 +9,50 @@ export function use_league_lobby_socket(league_id, token) {
     const ws_ref = useRef(null);
     const reconnect_timeout_ref = useRef(null);
 
-    // Fetch inicial HTTP
+    // Obtener y resolver el token de forma segura
+    const resolve_token = useCallback(() => {
+        if (prop_token) return prop_token;
+        try {
+            const session = read_session();
+            if (!session) return null;
+            if (typeof session === 'string') return session;
+            return session.token || session.access_token || session.access || null;
+        } catch (e) {
+            console.error('Error leyendo sesión:', e);
+            return null;
+        }
+    }, [prop_token]);
+
+    // Obtener el club_id de la sesión actual
+    const resolve_club_id = useCallback(() => {
+        try {
+            const session = read_session();
+            return session?.club_id || null;
+        } catch (e) {
+            console.error('Error leyendo club_id:', e);
+            return null;
+        }
+    }, []);
+
+    // Fetch inicial HTTP con manejo robusto de autorización
     const fetch_lobby = useCallback(async () => {
+        const token = resolve_token();
+        if (!token) {
+            set_error('No hay sesión activa o token de autenticación.');
+            set_loading(false);
+            return;
+        }
+
         try {
             set_loading(true);
             const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/leagues/${league_id}/live-lobby`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 }
             });
             if (!response.ok) {
-                throw new Error('No se pudo cargar el lobby de la liga.');
+                throw new Error(`Error al cargar el lobby (${response.status})`);
             }
             const data = await response.json();
             set_lobby_data(data);
@@ -28,7 +62,7 @@ export function use_league_lobby_socket(league_id, token) {
         } finally {
             set_loading(false);
         }
-    }, [league_id, token]);
+    }, [league_id, resolve_token]);
 
     useEffect(() => {
         fetch_lobby();
@@ -36,13 +70,19 @@ export function use_league_lobby_socket(league_id, token) {
 
     // Conexión WebSocket para tiempo real y reconexión automática
     useEffect(() => {
-        if (!league_id || !token) return;
+        const token = resolve_token();
+        const club_id = resolve_club_id();
+        if (!league_id || !token || !club_id) return;
 
         let is_connected = true;
 
         const connect_ws = () => {
-            const ws_base = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
-            const ws_url = `${ws_base}/api/leagues/${league_id}/ws?token=${token}`;
+            const ws_protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const raw_host = import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || window.location.hostname + ':8000';
+            const ws_host = raw_host.replace(/^(w{1,2}s|https?):\/\//i, '').replace(/\/+$/, '');
+
+            // Incluir tanto club_id como token en la URL para satisfacer la validación del backend
+            const ws_url = `${ws_protocol}//${ws_host}/ws/league/${league_id}/active?club_id=${club_id}&token=${token}`;
             const ws = new WebSocket(ws_url);
             ws_ref.current = ws;
 
@@ -50,8 +90,7 @@ export function use_league_lobby_socket(league_id, token) {
                 try {
                     const message = JSON.parse(event.data);
                     
-                    // Mutar estado global de la vista en tiempo real
-                    if (message.type === 'match_update' || message.type === 'league_update' || message.payload) {
+                    if (message.type ==='league_lobby_update' || message.type === 'match_update' || message.type === 'league_update' || message.payload) {
                         set_lobby_data(prev => {
                             if (!prev) return prev;
                             return {
@@ -60,7 +99,6 @@ export function use_league_lobby_socket(league_id, token) {
                             };
                         });
 
-                        // Mostrar Toast/Alerta sutil si hay resultado nuevo
                         if (message.toast || message.payload?.finished_match_summary) {
                             set_last_toast(message.toast || message.payload.finished_match_summary);
                             setTimeout(() => set_last_toast(null), 5000);
@@ -71,9 +109,8 @@ export function use_league_lobby_socket(league_id, token) {
                 }
             };
 
-            ws.onclose = () => {
-                if (is_connected) {
-                    // Reconexión automática ante microcortes tras 3 segundos
+            ws.onclose = (event) => {
+                if (is_connected && event.code !== 1000) {
                     reconnect_timeout_ref.current = setTimeout(() => {
                         connect_ws();
                     }, 3000);
@@ -81,7 +118,7 @@ export function use_league_lobby_socket(league_id, token) {
             };
 
             ws.onerror = (err) => {
-                console.error('Error en WebSocket de liga:', err);
+                console.error('Error en WebSocket de liga activa:', err);
                 ws.close();
             };
         };
@@ -97,7 +134,7 @@ export function use_league_lobby_socket(league_id, token) {
                 clearTimeout(reconnect_timeout_ref.current);
             }
         };
-    }, [league_id, token]);
+    }, [league_id, resolve_token, resolve_club_id]);
 
     return { lobby_data, loading, error, last_toast };
 }
