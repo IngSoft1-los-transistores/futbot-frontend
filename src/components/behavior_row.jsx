@@ -1,4 +1,5 @@
-function BehaviorRow({ name, code, isDefault, onDetails, onDelete }) {
+
+function BehaviorRow({ name, code, isDefault, onDetails, onEdit, onDelete }) {
     return (
         <div className="flex items-center px-6 py-4 border-b border-green-900/30 hover:bg-[#112419]/50 transition-colors">
             
@@ -35,6 +36,25 @@ function BehaviorRow({ name, code, isDefault, onDetails, onDelete }) {
                         </button>
                     )}
                 </div>
+                
+                {/* Botón Editar */}
+                <button 
+                    type="button"
+                    disabled={isDefault}
+                    title={
+                        isDefault 
+                          ? "No se puede editar un comportamiento preprogramado"
+                          : "Editar comportamiento"                        
+                    }
+                    onClick={onEdit}
+                    className={`px-3 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0 border ${
+                        isDefault 
+                            ? 'border-green-900/50 text-green-800 opacity-50 cursor-not-allowed' 
+                            : 'border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b]'
+                    }`}
+                >
+                    Editar
+                </button>
               
             </div>
         </div>

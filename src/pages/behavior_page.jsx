@@ -127,6 +127,7 @@ export default function BehaviorPage() {
                                         set_delete_error(null)
                                         set_behavior_to_delete(behavior_element)
                                     }}
+                                    onEdit={() => navigate(`/behaviors/edit/${behavior_element.id}`)}
                                 />
                             )
                         })}

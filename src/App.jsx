@@ -1,5 +1,9 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Login from './pages/Login'
+import ForgotPasswordPage from './pages/forgot_password_page'
+import ResetPasswordPage from './pages/reset_password_page'
+import CheckEmailPage from './pages/check_email_page'
+import VerifyEmailPage from './pages/verify_email_page'
 import Home from './pages/Home'
 import Match from './pages/Match'
 import RegisterPage from './pages/register_page'
@@ -9,7 +13,10 @@ import FriendlyRoomPage from './pages/friendly_room_page'
 import './styles/tokens.css'
 import './App.css'
 import JoinFriendly from './pages/join_friendly'
+import JoinLeaguePage from './pages/join_league_page'
+import LeagueWaitingRoom from './pages/league_waiting_room'
 import LeaguesPage from './pages/leagues_page'
+import BehaviorEditorPage from './pages/behavior_editor_page'
 
 
 const Navbar = () => (
@@ -73,16 +80,24 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/check-email" element={<CheckEmailPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/register" element={<Registration />} />
         <Route path="/auth/register" element={<Navigate to="/register" replace />} />
         <Route path="/auth/login" element={<Navigate to="/login" replace />} />
         <Route path="/behaviors" element={<DashboardLayout><BehaviorPage /></DashboardLayout>} />
+        <Route path="/behaviors/create" element={<DashboardLayout><BehaviorEditorPage /></DashboardLayout>} />
+        <Route path="/behaviors/edit/:behavior_id" element={<DashboardLayout><BehaviorEditorPage /></DashboardLayout>} />
         <Route path="/login" element={<Login />} />
         <Route path="/matches/:match_id" element={<Match />} />
         <Route path="/home" element={<Home />} />
         <Route path="/friendly/join" element={<JoinFriendly />} />
+        <Route path="/ligas/:league_id/unirse" element={<JoinLeaguePage />} />
         <Route path="/amistosos/:room_id/sala" element={<DashboardLayout><FriendlyRoomPage /></DashboardLayout>} />
         <Route path="/partidos/:match_id" element={<Match />} />
+        <Route path="/league/:league_id/waiting" element={<LeagueWaitingRoom />}/>
         <Route path="/leagues" element={<LeaguesPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
