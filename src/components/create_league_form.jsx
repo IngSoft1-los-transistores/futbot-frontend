@@ -9,6 +9,7 @@ import MiniPitchViewer from './mini_pitch_viewer';
 const INITIAL_FORM = {
   name: '',
   is_private: false,
+  has_penalty_shootout: false,
   password: '',
   min_clubs: '',
   max_clubs: '',
@@ -282,6 +283,23 @@ export default function CreateLeagueForm({ onCancel }) {
           />
           Liga privada
         </label>
+      </div>
+
+      <div className="col-span-2">
+        <label htmlFor="has_penalty_shootout" className={`${label_class} flex items-center gap-2`}>
+          <input
+            id="has_penalty_shootout"
+            name="has_penalty_shootout"
+            type="checkbox"
+            checked={form.has_penalty_shootout}
+            onChange={handle_change}
+          />
+          Definición por penales (Sin empates)
+        </label>
+        <p className="text-xs text-[#C9D6C5]">
+          En caso de empate se jugarán penales australianos. Ganar en tiempo regular
+          otorga 3 puntos, ganar en penales otorga 2 puntos y perder 0 puntos
+        </p>
       </div>
 
       {form.is_private && (
