@@ -141,7 +141,6 @@ export default function FriendlyRoomPage() {
         title="Amistoso"
         status={STATUS_CHIPS[room.status] ?? { label: room.status, variant: 'default' }}
         description="Cuando ambos clubes estén en la sala, cualquiera de los dos puede iniciar el partido."
-        roomCode={room.roomCode}
         actions={actions}
       />
       {connection_error && (!room.awayClub && (

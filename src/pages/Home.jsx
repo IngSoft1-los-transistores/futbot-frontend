@@ -9,7 +9,7 @@ import CreateLeagueForm from '../components/create_league_form';
 import ActiveRoomsModal from '../components/ActiveRoomsModal';
 
 import './Home.css'
-import JoinFriendlyModal from '../components/join_friendly_modal'
+
 import JoinPrivateLeagueModal from '../components/join_private_league_modal'
 
 export default function Home() {
@@ -18,7 +18,6 @@ export default function Home() {
   const [error, set_error] = useState('')
   const [attempt, set_attempt] = useState(0)
   const [closing, set_closing] = useState(false)
-  const [join_open, set_join_open] = useState(false)
   const [create_open, set_create_open] = useState(false)
   const [private_league_open, set_private_league_open] = useState(false)
   const [show_form, setShow_form] = useState(false);
@@ -97,12 +96,6 @@ export default function Home() {
     } finally {
       set_closing(false)
     }
-  }
-
-  function join_friendly({ room_id, code }) {
-    set_join_open(false)
-    // El código funciona como contraseña: va en el state de la navegación, no en la URL
-    navigate('/friendly/join', { state: { room_id, code } })
   }
 
   function join_private_league(league) {
@@ -261,9 +254,9 @@ export default function Home() {
                   <button className="home-action" onClick={() => set_create_open(true)}>
                     CREAR
                   </button>
-                  <button className="home-action" onClick={() => set_join_open(true)}>
+                  <Link to="/friendly" className="home-action">
                     Unirse a un amistoso
-                  </button>
+                  </Link>
                   <button className="home-action" onClick={() => set_private_league_open(true)}>
                     Unirse a liga privada
                   </button>
@@ -387,12 +380,6 @@ export default function Home() {
       <ActiveRoomsModal
         open={active_rooms_open}
         onClose={() => set_active_rooms_open(false)}
-      />
-      
-      <JoinFriendlyModal
-        open={join_open}
-        on_close={() => set_join_open(false)}
-        on_submit={join_friendly}
       />
 
       {private_league_open && (

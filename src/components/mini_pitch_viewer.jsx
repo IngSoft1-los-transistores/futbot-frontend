@@ -46,7 +46,7 @@ export default function MiniPitchViewer({ player_id, behavior_id, onClose }) {
   const pitch_state = simulationData?.type === 'tick' ? to_pitch_state(simulationData, player_id) : null;
 
   return (
-  <div className="mini-pitch-viewer">
+  <div className="mini-pitch-viewer"  onClick={(event) => event.stopPropagation()}>
     <div className="mini-pitch-viewer__panel">
       <div className="mini-pitch-viewer__header">
         <div>
