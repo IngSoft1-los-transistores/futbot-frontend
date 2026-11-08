@@ -115,6 +115,7 @@ export default function Home() {
           </div>
         </div>
         <div className="home-session">
+          <Link className="home-action" to="/ranking">Ranking de clubes</Link>
           {status === 'ready' && <span className="home-session-state"><span aria-hidden="true" /> Club en línea</span>}
           <button className="home-action" onClick={logout} disabled={closing}>
             {closing ? 'Cerrando sesión…' : 'Cerrar sesión'}
