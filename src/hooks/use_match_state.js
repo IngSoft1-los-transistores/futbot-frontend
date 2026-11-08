@@ -125,7 +125,7 @@ export default function useMatchState(match_id, on_protocol_message) {
               current.send(JSON.stringify({ type: 'pong' }))
               return
             }
-            if (message.type === 'behavior_change_accepted') pending_change_ref.current = false
+            if (message.event === 'BEHAVIOR_CHANGED') pending_change_ref.current = false  
             if (message.type === 'error' && message.status !== 401 && pending_change_ref.current) {
               pending_change_ref.current = false
               protocol_message_ref.current?.(event.data)

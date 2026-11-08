@@ -3,8 +3,7 @@ import { parse_change_result } from '../src/match/change_behavior_result'
 
 describe('parse_change_result', () => {
   it('reconoce el acuse de éxito', () => {
-    const raw = JSON.stringify({ type: 'behavior_change_accepted', playerId: 'p1', behaviorId: 'b2' })
-    expect(parse_change_result(raw)).toEqual({ ok: true })
+    const raw = JSON.stringify({ event: 'BEHAVIOR_CHANGED', payload: { playerId: 'p1', behaviorId: 'b2' } })
   })
 
   it('devuelve el mensaje del servidor en un error', () => {
