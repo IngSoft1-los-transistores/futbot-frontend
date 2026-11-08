@@ -53,8 +53,8 @@ const selection_of = (names) =>
 
 const expected_body = {
   code: ROOM_CODE,
-  titulares: selection_of(starters),
-  suplentes: selection_of(substitutes),
+  starters: selection_of(starters),
+  substitutes: selection_of(substitutes),
 }
 
 const joined = {
@@ -1259,13 +1259,13 @@ test('código de sala inválido (404) permite ingresar otro sin perder la selecc
   ).toBe('ZZZ999')
 
   expect(
-    requests[1].body.titulares,
+    requests[1].body.starters,
   ).toEqual(
     selection_of(starters),
   )
 
   expect(
-    requests[1].body.suplentes,
+    requests[1].body.substitutes,
   ).toEqual(
     selection_of(substitutes),
   )

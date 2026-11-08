@@ -10,6 +10,7 @@ import ActiveRoomsModal from '../components/ActiveRoomsModal';
 
 import './Home.css'
 import JoinFriendlyModal from '../components/join_friendly_modal'
+import JoinPrivateLeagueModal from '../components/join_private_league_modal'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -19,6 +20,7 @@ export default function Home() {
   const [closing, set_closing] = useState(false)
   const [join_open, set_join_open] = useState(false)
   const [create_open, set_create_open] = useState(false)
+  const [private_league_open, set_private_league_open] = useState(false)
   const [show_form, setShow_form] = useState(false);
   const [show_success, setShow_success] = useState(false);
   const [show_league_form, setShow_league_form] = useState(false);
@@ -101,6 +103,12 @@ export default function Home() {
     set_join_open(false)
     // El código funciona como contraseña: va en el state de la navegación, no en la URL
     navigate('/friendly/join', { state: { room_id, code } })
+  }
+
+  function join_private_league(league) {
+    set_private_league_open(false)
+    const league_id = encodeURIComponent(league.leagueId)
+    navigate(league.isEnrolled ? `/league/${league_id}/waiting` : `/ligas/${league_id}/unirse`)
   }
 
   return (
@@ -256,6 +264,9 @@ export default function Home() {
                   <button className="home-action" onClick={() => set_join_open(true)}>
                     Unirse a un amistoso
                   </button>
+                  <button className="home-action" onClick={() => set_private_league_open(true)}>
+                    Unirse a liga privada
+                  </button>
                 </div>
               </article>
 
@@ -383,6 +394,13 @@ export default function Home() {
         on_close={() => set_join_open(false)}
         on_submit={join_friendly}
       />
+
+      {private_league_open && (
+        <JoinPrivateLeagueModal
+          on_close={() => set_private_league_open(false)}
+          on_found={join_private_league}
+        />
+      )}
 
       <CreateFriendlyModal
         isOpen={create_open}

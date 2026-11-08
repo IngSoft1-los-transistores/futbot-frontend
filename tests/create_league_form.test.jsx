@@ -106,14 +106,54 @@ describe("CreateLeagueForm", () => {
 
     expect(await screen.findByText(/liga creada correctamente/i)).not.toBeNull();
     expect(screen.getByText("ABC123")).not.toBeNull();
+    expect(screen.getByText("Compartí este código para que otros clubes se unan:")).not.toBeNull();
 
     expect(createLeague).toHaveBeenCalledTimes(1);
     const sent = createLeague.mock.calls[0][0];
     expect(sent.name).toBe("Liga de prueba");
     expect(sent.is_private).toBe(false);
+    expect(sent.has_penalty_shootout).toBe(false);
     expect(sent.starters).toHaveLength(3);
     expect(sent.substitutes).toHaveLength(3);
     expect(sent.starters[0]).toEqual({ playerId: "messi", behaviorId: "1" });
+  });
+
+  it("envía has_penalty_shootout como true cuando se activa la definición por penales", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <CreateLeagueForm onCancel={vi.fn()} />
+      </MemoryRouter>
+    );
+
+    await fill_fields(user);
+    await fill_squad(user);
+    await user.click(screen.getByLabelText(/definición por penales/i));
+    await user.click(submit_button());
+
+    expect(await screen.findByText(/liga creada correctamente/i)).not.toBeNull();
+    expect(createLeague.mock.calls[0][0].has_penalty_shootout).toBe(true);
+  });
+
+  it("pide compartir también la contraseña al crear una liga privada", async () => {
+    createLeague.mockResolvedValue({ code_to_join: "ABC123", is_private: true });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <CreateLeagueForm onCancel={vi.fn()} />
+      </MemoryRouter>
+    );
+
+    await fill_fields(user);
+    await user.click(screen.getByLabelText(/liga privada/i));
+    await user.type(screen.getByLabelText("Contraseña"), "clave1234");
+    await fill_squad(user);
+    await user.click(submit_button());
+
+    expect(
+      await screen.findByText("Compartí este código y la contraseña para que otros clubes se unan:")
+    ).not.toBeNull();
+    expect(createLeague.mock.calls[0][0].password).toBe("clave1234");
   });
 
   it("muestra el error del backend y no muestra el éxito", async () => {
