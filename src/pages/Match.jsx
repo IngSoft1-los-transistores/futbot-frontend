@@ -6,6 +6,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import useMatchState from '../hooks/use_match_state'
 import PauseBanner from '../components/pause_banner'
 import MatchPitch from '../components/match_pitch'
+import PenaltyShootout from '../components/PenaltyShootout'
 import LiveMatchControls from '../components/LiveMatchControls'
 import SubstitutionModal from '../components/SubstitutionModal'
 import './Match.css'
@@ -42,6 +43,10 @@ const protocol_initial_state = {
   pending_substitutions: { HOME: null, AWAY: null },
   changes_used_this_pause: { HOME: false, AWAY: false },
   substitution_last_applied: null,
+  penalties: { active: false, completed: false, attempts: { HOME: 0, AWAY: 0 },
+    scores: { HOME: 0, AWAY: 0 }, results: { HOME: [], AWAY: [] },
+    max_attempts: 5, max_seconds_per_attempt: 10, tick_rate: 1,
+    start_revision: null, winner: null },
 }
 const remember_event = (state, event) => ({ ...state, events: [event, ...state.events].slice(0, 30) })
 const protocol_players = (players) => Object.fromEntries(players.map(normalize_player).filter(Boolean).map((player) => [player.id, player]))
@@ -58,6 +63,7 @@ function parse_match_message(raw) {
     'MATCH_CONNECTED', 'MATCH_STARTED', 'SIMULATION_TICK', 'GOAL_SCORED',
     'PAUSE_STARTED', 'PAUSE_ENDED', 'MATCH_RESUMED', 'CLIENT_DISCONNECTED',
     'MATCH_FINISHED', 'ERROR', 'SUBSTITUTION_SCHEDULED', 'SUBSTITUTION_APPLIED',
+    'PENALTIES_STARTED', 'PENALTY_SHOT_RESULT', 'PENALTIES_FINISHED',
   ].includes(event)
     ? { event, payload: message }
     : null
@@ -72,6 +78,7 @@ function protocol_reducer(state, action) {
     'MATCH_CONNECTED', 'MATCH_STARTED', 'SIMULATION_TICK', 'GOAL_SCORED',
     'PAUSE_STARTED', 'PAUSE_ENDED', 'MATCH_RESUMED', 'CLIENT_DISCONNECTED',
     'MATCH_FINISHED', 'ERROR', 'SUBSTITUTION_SCHEDULED', 'SUBSTITUTION_APPLIED',
+    'PENALTIES_STARTED', 'PENALTY_SHOT_RESULT', 'PENALTIES_FINISHED',
   ].includes(action.message.event)) return state
   state = { ...state, received: true }
   const { event, payload } = action.message
@@ -141,6 +148,52 @@ function protocol_reducer(state, action) {
       return remember_event(state, { type: 'client_disconnected', club_id: payload.clubId, message: payload.message })
     case 'MATCH_FINISHED':
       return { ...state, status: 'finished', pause: null, score: normalize_score(payload.finalScore) ?? state.score }
+    case 'PENALTIES_STARTED':
+      return {
+        ...state,
+        status: 'paused',
+        penalties: {
+          ...protocol_initial_state.penalties,
+          active: true,
+          start_revision: Number.isInteger(action.server_revision) ? action.server_revision : null,
+          max_attempts: Number.isInteger(payload.maxAttemptsPerTeam) && payload.maxAttemptsPerTeam > 0
+            ? payload.maxAttemptsPerTeam : protocol_initial_state.penalties.max_attempts,
+          max_seconds_per_attempt: is_num(payload.maxSecondsPerAttempt) && payload.maxSecondsPerAttempt > 0
+            ? payload.maxSecondsPerAttempt : protocol_initial_state.penalties.max_seconds_per_attempt,
+          tick_rate: is_num(payload.tickRate) && payload.tickRate > 0
+            ? payload.tickRate : protocol_initial_state.penalties.tick_rate,
+        },
+      }
+    case 'PENALTY_SHOT_RESULT': {
+      const penalty_team = normalize_team(payload.team)
+      if (!penalty_team) return state
+      const attempts = is_obj(payload.attempts) && Number.isInteger(payload.attempts[penalty_team])
+        ? payload.attempts[penalty_team]
+        : state.penalties.attempts[penalty_team] + 1
+      const scores = is_obj(payload.score) && Number.isInteger(payload.score[penalty_team])
+        ? payload.score[penalty_team]
+        : state.penalties.scores[penalty_team] + (payload.status === 'scored' ? 1 : 0)
+      const results = [...state.penalties.results[penalty_team]]
+      if (attempts > 0 && attempts <= state.penalties.max_attempts &&
+          ['scored', 'missed'].includes(payload.status)) {
+        results[attempts - 1] = payload.status
+      }
+      return {
+        ...state,
+        penalties: {
+          ...state.penalties,
+          active: true,
+          attempts: { ...state.penalties.attempts, [penalty_team]: attempts },
+          scores: { ...state.penalties.scores, [penalty_team]: scores },
+          results: { ...state.penalties.results, [penalty_team]: results },
+          start_revision: Number.isInteger(action.server_revision)
+            ? action.server_revision + 1
+            : state.penalties.start_revision,
+        },
+      }
+    }
+    case 'PENALTIES_FINISHED':
+      return { ...state, penalties: { ...state.penalties, active: true, completed: true, winner: normalize_team(payload.winner) } }
     case 'ERROR': {
       if (payload.team != null && (!team || team !== action.own_team)) return state
       const message = String(payload.message ?? 'Error de ejecución')
@@ -167,6 +220,7 @@ function MatchView({ match_id, room_behavior_names }) {
   const [substitution_error, set_substitution_error] = useState('')
   const own_club_id = useMemo(() => read_session()?.club_id, [])
   const own_team_ref = useRef(null)
+  const state_revision_ref = useRef(null)
   const receive_protocol_message = useCallback((raw) => {
     if (raw?.type === 'connection') {
       dispatch_protocol({ type: 'connection', value: raw.value })
@@ -186,7 +240,12 @@ function MatchView({ match_id, room_behavior_names }) {
         set_submitting_substitution(false)
         set_substitution_error(String(message.payload.message ?? 'Error de sustitución'))
       }
-      dispatch_protocol({ type: 'message', message, own_team: own_team_ref.current })
+      dispatch_protocol({
+        type: 'message',
+        message,
+        own_team: own_team_ref.current,
+        server_revision: state_revision_ref.current,
+      })
     }
   }, [])
   const { state, error, loading, waiting_for_start, send_match_command } = useMatchState(match_id, receive_protocol_message)
@@ -195,6 +254,9 @@ function MatchView({ match_id, room_behavior_names }) {
   useEffect(() => {
     own_team_ref.current = own_team
   }, [own_team])
+  useEffect(() => {
+    state_revision_ref.current = state?.revision ?? null
+  }, [state?.revision])
   const [retrying_start, set_retrying_start] = useState(false)
   const [start_error, set_start_error] = useState('')
   const previous_status = useRef(null)
@@ -314,9 +376,20 @@ function MatchView({ match_id, room_behavior_names }) {
         </section>
         <LiveMatchControls
           status={state.status}
-          visible={Boolean(own_team)}
+          visible={Boolean(own_team) && !protocol_state.penalties.active}
           disabled={team_coach_active}
           onOpen={open_substitutions}
+        />
+        <PenaltyShootout
+          penalties={protocol_state.penalties}
+          home_name={state.home_club.name}
+          away_name={state.away_club.name}
+          revision={state.revision}
+        />
+        <MatchPitch
+          state={state}
+          protocol_state={protocol_state}
+          penalties_active={protocol_state.penalties.active}
         />
         <div className="match-pitch-stage">
           {/* current_time is frozen during a pause, so the key only changes when a new pause starts. */}

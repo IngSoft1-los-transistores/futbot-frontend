@@ -202,6 +202,76 @@ describe('Estado del partido por WebSocket', () => {
     expect(screen.getByRole('button', { name: /Confirmar cambio/ })).toBeDisabled()
   })
 
+  it('aisla el duelo de penales y actualiza el marcador de aciertos y fallos', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state({ status: 'paused' }) })
+    await emit(() => sockets[0].message({
+      type: 'PENALTIES_STARTED', maxAttemptsPerTeam: 5, maxSecondsPerAttempt: 10, tickRate: 10,
+    }))
+    await emit(() => sockets[0].state({
+      revision: 2,
+      status: 'paused',
+      players: snapshot().players.map((player, index) => ({
+        ...player,
+        on_field: index < 2,
+        position: index < 2 ? player.position : null,
+      })),
+    }))
+
+    expect(screen.getByRole('heading', { name: 'Tanda de penales' })).toBeInTheDocument()
+    const duel_players = Array.from(document.querySelectorAll('.match-pitch-player'))
+    expect(duel_players).toHaveLength(2)
+    expect(duel_players.map((player) => player.querySelector('title').textContent))
+      .toEqual(expect.arrayContaining(['Jugador 01 · Local FC', 'Jugador 02 · Local FC']))
+    expect(screen.getAllByLabelText(/Penal [1-5]: pendiente/)).toHaveLength(10)
+
+    await emit(() => sockets[0].message({
+      type: 'PENALTY_SHOT_RESULT',
+      status: 'scored',
+      team: 'HOME',
+      attempts: { HOME: 1, AWAY: 0 },
+      score: { HOME: 1, AWAY: 0 },
+      shooterId: 'p1',
+      goalkeeperId: 'p2',
+    }))
+    expect(screen.getByLabelText('Penal 1: gol')).toHaveClass('penalty-attempt--scored')
+    expect(screen.getByLabelText('Local FC: 1 goles')).toBeInTheDocument()
+
+    await emit(() => sockets[0].message({
+      type: 'PENALTY_SHOT_RESULT',
+      status: 'missed',
+      team: 'AWAY',
+      attempts: { HOME: 1, AWAY: 1 },
+      score: { HOME: 1, AWAY: 0 },
+      shooterId: 'p2',
+      goalkeeperId: 'p1',
+    }))
+    expect(screen.getByLabelText('Penal 1: fallo')).toHaveClass('penalty-attempt--missed')
+    expect(screen.getByLabelText('Visitante FC: 0 goles')).toBeInTheDocument()
+  })
+
+  it('cuenta atrás desde el tiempo anunciado por el backend y reinicia al siguiente penal', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state({ status: 'paused' }) })
+    await emit(() => sockets[0].message({
+      type: 'PENALTIES_STARTED', maxAttemptsPerTeam: 5, maxSecondsPerAttempt: 10, tickRate: 10,
+    }))
+    expect(screen.getByLabelText('Tiempo restante del penal')).toHaveTextContent('10')
+    await emit(() => sockets[0].state({ revision: 31, status: 'paused' }))
+    expect(screen.getByLabelText('Tiempo restante del penal')).toHaveTextContent('7')
+    await emit(() => sockets[0].state({ revision: 101, status: 'paused' }))
+    expect(screen.getByLabelText('Tiempo restante del penal')).toHaveTextContent('0')
+
+    await emit(() => sockets[0].message({
+      type: 'PENALTY_SHOT_RESULT',
+      status: 'missed',
+      team: 'HOME',
+      attempts: { HOME: 1, AWAY: 0 },
+      score: { HOME: 0, AWAY: 0 },
+    }))
+    expect(screen.getByLabelText('Tiempo restante del penal')).toHaveTextContent('10')
+  })
+
   it('conserva el último estado al desconectarse y recupera el snapshot al reconectar', async () => {
     mount()
     await emit(() => sockets[0].state())
