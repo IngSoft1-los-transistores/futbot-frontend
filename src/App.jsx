@@ -18,6 +18,7 @@ import LeagueWaitingRoom from './pages/league_waiting_room'
 import LeaguesPage from './pages/leagues_page'
 import BehaviorEditorPage from './pages/behavior_editor_page'
 import OngoingLeagueLobbyView from './pages/league_active_room'
+import FriendlyListPage from './pages/friendly_list_page'
 
 
 const Navbar = () => (
@@ -95,6 +96,7 @@ export default function App() {
         <Route path="/matches/:match_id" element={<Match />} />
         <Route path="/home" element={<Home />} />
         <Route path="/friendly/join" element={<JoinFriendly />} />
+        <Route path="/friendly" element={<FriendlyListPage />} />
         <Route path="/ligas/:league_id/unirse" element={<JoinLeaguePage />} />
         <Route path="/amistosos/:room_id/sala" element={<DashboardLayout><FriendlyRoomPage /></DashboardLayout>} />
         <Route path="/partidos/:match_id" element={<Match />} />
