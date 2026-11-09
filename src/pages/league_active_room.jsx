@@ -2,16 +2,27 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { read_session } from '../auth/session';
 import { use_league_lobby_socket } from '../hooks/use_league_live_socket';
+import ChangeLineupModal from '../components/change_lineup_modal';
 import './league_active_room.css'
+import {useState} from "react";
 
 export default function OngoingLeagueLobbyView() {
     const { league_id } = useParams();
     const navigate = useNavigate();
     const session = read_session();
-    const token = session?.token;
+    const token = session?.access_token;
     const user_club_id = session?.club_id;
+    const [lineup_open, set_lineup_open] = useState(false)
+    const [lineup_notice, set_lineup_notice] = useState(null)
 
     const { lobby_data, loading, error, last_toast } = use_league_lobby_socket(league_id, token);
+    const { league_name, status, currentMatch, nextMatch, standings, calendar } = lobby_data || {};
+
+    const my_squad = lobby_data?.my_squad ?? []
+    const can_change_lineup =
+      status === 'in_progress' &&
+      my_squad.length === 6 &&
+      my_squad.every((player) => player.player_id)
 
     if (loading && !lobby_data) {
         return (
@@ -29,8 +40,13 @@ export default function OngoingLeagueLobbyView() {
         return <div className="waiting-error">Error al cargar la liga: {error}</div>;
     }
 
-    const { league_name, status, currentMatch, nextMatch, standings, calendar } = lobby_data || {};
-
+    
+    console.log({
+      status,
+      my_squad,
+      can_change_lineup,
+      lobby_data,
+    })
     return (
         <div className="lobby-view">
             {/* Toast sutil de notificación en tiempo real */}
@@ -45,6 +61,14 @@ export default function OngoingLeagueLobbyView() {
                     <h1 className="text-xl font-bold">{league_name || 'Lobby de Liga'}</h1>
                     <p className="text-sm text-[#b5c2b3]">Estado: <span className="uppercase text-[#bf9548] font-semibold">{status}</span></p>
                 </div>
+                {can_change_lineup && (
+                    <button
+                      className="waiting-btn-primary"
+                      onClick={() => set_lineup_open(true)}
+                    >
+                      Cambiar alineación
+                    </button>
+                )}
                 <button className="waiting-btn-secondary" onClick={() => navigate('/home')}>
                     Volver al Home
                 </button>
@@ -144,6 +168,23 @@ export default function OngoingLeagueLobbyView() {
                     </table>
                 </div>
             </section>
+            {/* Modal para cambiar alineación */}
+            {lineup_notice && (
+              <div role="status" className="toast-alert">
+                {lineup_notice}
+              </div>
+            )}
+            {lineup_open && (
+              <ChangeLineupModal
+                league_id={league_id}
+                squad={my_squad}
+                onClose={() => set_lineup_open(false)}
+                onSuccess={(message) => {
+                  set_lineup_notice(message)
+                  window.setTimeout(() => set_lineup_notice(null), 5000)
+                }}
+              />
+            )}
 
             {/* Calendario / Fixture */}
             <section className="calendar-card">
