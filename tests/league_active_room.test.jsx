@@ -1,4 +1,4 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
@@ -206,5 +206,51 @@ describe('OngoingLeagueLobbyView - Suite Exhaustiva', () => {
         }) }));
         expect(await screen.findByText(/El torneo ha finalizado/)).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Ver Transmisión en Vivo/ })).not.toBeInTheDocument();
+    });
+
+    it.each([
+        ['antes', false], ['antes', true], ['después', false], ['después', true],
+    ])('conserva la plantilla HTTP con WS %s (envuelto: %s)', async (order, wrapped) => {
+        const user = userEvent.setup();
+        const squad = Array.from({ length: 6 }, (_, index) => ({
+            player_id: `player-${index}`, name: `Jugador ${index + 1}`,
+            role: index < 3 ? 'starter' : 'substitute',
+        }));
+        let resolveFetch;
+        globalThis.fetch.mockReturnValueOnce(new Promise((resolve) => { resolveFetch = resolve; }));
+        render(<MemoryRouter initialEntries={['/league/league-123/active']}>
+            <Routes>
+                <Route path="/league/:league_id/active" element={<OngoingLeagueLobbyView />} />
+            </Routes>
+        </MemoryRouter>);
+        const respond = () => resolveFetch({
+            ok: true,
+            json: async () => ({ ...mock_lobby_payload, currentMatch: null, my_squad: squad }),
+        });
+        if (order === 'después') await act(async () => respond());
+
+        const snapshot = {
+            ...mock_lobby_payload, my_squad: [],
+            currentMatch: { ...mock_lobby_payload.currentMatch, home_score: 2, away_score: 2 },
+        };
+        const message = wrapped
+            ? { type: 'league_lobby_update', payload: snapshot }
+            : { type: 'league_lobby_update', ...snapshot };
+        const push = () => MockWebSocket.instances[0].onmessage({ data: JSON.stringify(message) });
+        act(push);
+        if (order === 'antes') {
+            expect(screen.queryByRole('button', { name: /Cambiar alineación/i })).not.toBeInTheDocument();
+            await act(async () => respond());
+        }
+        // El HTTP tardío aporta la plantilla sin volver al estado anterior del partido.
+        expect(screen.getByText('2 - 2')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Ver Transmisión en Vivo/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Cambiar alineación/i })).toBeInTheDocument();
+        // Los siguientes snapshots tampoco deben borrar la plantilla del usuario.
+        act(push);
+        await user.click(screen.getByRole('button', { name: /Cambiar alineación/i }));
+        const modal = screen.getByRole('dialog');
+        for (const player of squad) expect(within(modal).getByText(player.name)).toBeInTheDocument();
+        expect(within(modal).getAllByText('3/3')).toHaveLength(2);
     });
 });

@@ -59,9 +59,15 @@ export function useLeagueLobbySocket(league_id, prop_token) {
                 throw new Error(`Error al cargar el lobby (${response.status})`);
             }
             const data = await response.json();
-            // Un snapshot en vivo tiene prioridad sobre el HTTP iniciado antes.
-            if (signal.aborted || initial_revision !== live_revision_ref.current) return;
-            set_lobby_data(data);
+            if (signal.aborted) return;
+            // El WS mantiene el estado vivo; la plantilla privada procede del HTTP.
+            if (initial_revision !== live_revision_ref.current) {
+                if (Object.hasOwn(data, 'my_squad')) {
+                    set_lobby_data(prev => ({ ...prev, my_squad: data.my_squad }));
+                }
+            } else {
+                set_lobby_data(data);
+            }
             set_error(null);
         } catch (err) {
             if (signal.aborted || initial_revision !== live_revision_ref.current) return;
@@ -105,8 +111,11 @@ export function useLeagueLobbySocket(league_id, prop_token) {
                     if (message.type ==='league_lobby_update' || message.type === 'match_update' || message.type === 'league_update' || message.payload) {
                         // El backend emite snapshots planos; admitir también eventos envueltos.
                         const payload = message.payload ?? message;
+                        // El broadcast no es personalizado: su my_squad no es el del usuario.
+                        const live_data = { ...payload };
+                        delete live_data.my_squad;
                         live_revision_ref.current += 1;
-                        set_lobby_data(prev => ({ ...prev, ...payload }));
+                        set_lobby_data(prev => ({ ...prev, ...live_data }));
                         set_loading(false);
                         set_error(null);
 
