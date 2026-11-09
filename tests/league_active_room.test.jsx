@@ -1,14 +1,15 @@
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
 import OngoingLeagueLobbyView from '../src/pages/league_active_room';
 import * as sessionModule from '../src/auth/session';
 
-vi.mock('../auth/session', () => ({
+vi.mock('../src/auth/session', () => ({
     read_session: vi.fn()
 }));
 
-global.fetch = vi.fn();
+globalThis.fetch = vi.fn();
 
 // Mock global de WebSocket para simular tiempo real
 class MockWebSocket {
@@ -20,7 +21,7 @@ class MockWebSocket {
     close = vi.fn();
 }
 MockWebSocket.instances = [];
-global.WebSocket = MockWebSocket;
+globalThis.WebSocket = MockWebSocket;
 
 describe('OngoingLeagueLobbyView - Suite Exhaustiva', () => {
     const mock_session = {
@@ -61,7 +62,7 @@ describe('OngoingLeagueLobbyView - Suite Exhaustiva', () => {
     beforeEach(() => {
         MockWebSocket.instances = [];
         vi.spyOn(sessionModule, 'read_session').mockReturnValue(mock_session);
-        global.fetch.mockResolvedValue({
+        globalThis.fetch.mockReset().mockResolvedValue({
             ok: true,
             json: async () => mock_lobby_payload
         });
@@ -148,7 +149,7 @@ describe('OngoingLeagueLobbyView - Suite Exhaustiva', () => {
     });
 
     it('4. Maneja adecuadamente el error de carga HTTP del lobby', async () => {
-        global.fetch.mockResolvedValueOnce({
+        globalThis.fetch.mockResolvedValueOnce({
             ok: false
         });
 
@@ -161,5 +162,49 @@ describe('OngoingLeagueLobbyView - Suite Exhaustiva', () => {
         );
 
         expect(await screen.findByText(/Error al cargar la liga/i)).toBeInTheDocument();
+    });
+
+    it.each(['antes', 'después'])('muestra el partido por WebSocket %s del HTTP inicial', async (order) => {
+        const user = userEvent.setup();
+        const waiting = { ...mock_lobby_payload, currentMatch: null };
+        let resolveFetch;
+        globalThis.fetch.mockReturnValueOnce(new Promise((resolve) => { resolveFetch = resolve; }));
+        render(
+            <MemoryRouter initialEntries={['/league/league-123/active']}>
+                <Routes>
+                    <Route path="/league/:league_id/active" element={<OngoingLeagueLobbyView />} />
+                    <Route path="/matches/m-1" element={<h1>Partido m-1</h1>} />
+                </Routes>
+            </MemoryRouter>
+        );
+        const respond = () => resolveFetch({ ok: true, json: async () => waiting });
+        if (order === 'después') {
+            await act(async () => respond());
+            expect(screen.queryByRole('button', { name: /Ver Transmisión en Vivo/ })).not.toBeInTheDocument();
+        }
+        // Formato real de get_league_lobby_payload, sin contenedor "payload".
+        act(() => MockWebSocket.instances[0].onmessage({
+            data: JSON.stringify({ type: 'league_lobby_update', ...mock_lobby_payload }),
+        }));
+        expect(await screen.findByRole('button', { name: /Ver Transmisión en Vivo/ })).toBeInTheDocument();
+        if (order === 'antes') await act(async () => respond());
+        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+        await user.click(screen.getByRole('button', { name: /Ver Transmisión en Vivo/ }));
+        expect(screen.getByRole('heading', { name: 'Partido m-1' })).toBeInTheDocument();
+    });
+
+    it('actualiza el cierre de la liga con el mensaje real del servidor', async () => {
+        render(<MemoryRouter initialEntries={['/league/league-123/active']}>
+            <Routes>
+                <Route path="/league/:league_id/active" element={<OngoingLeagueLobbyView />} />
+            </Routes>
+        </MemoryRouter>);
+        await screen.findByText('Liga Estelar');
+        act(() => MockWebSocket.instances[0].onmessage({ data: JSON.stringify({
+            type: 'league_lobby_update', ...mock_lobby_payload,
+            status: 'finished', currentMatch: null, nextMatch: null,
+        }) }));
+        expect(await screen.findByText(/El torneo ha finalizado/)).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Ver Transmisión en Vivo/ })).not.toBeInTheDocument();
     });
 });

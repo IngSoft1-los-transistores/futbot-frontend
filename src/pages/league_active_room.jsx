@@ -1,17 +1,16 @@
-import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { read_session } from '../auth/session';
-import { use_league_lobby_socket } from '../hooks/use_league_live_socket';
+import { useLeagueLobbySocket } from '../hooks/use_league_live_socket';
 import './league_active_room.css'
 
 export default function OngoingLeagueLobbyView() {
     const { league_id } = useParams();
     const navigate = useNavigate();
     const session = read_session();
-    const token = session?.token;
+    const token = session?.access_token ?? session?.token;
     const user_club_id = session?.club_id;
 
-    const { lobby_data, loading, error, last_toast } = use_league_lobby_socket(league_id, token);
+    const { lobby_data, loading, error, last_toast } = useLeagueLobbySocket(league_id, token);
 
     if (loading && !lobby_data) {
         return (
