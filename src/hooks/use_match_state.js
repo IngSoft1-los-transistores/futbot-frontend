@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { connect_match_state } from '../api/matches'
 import { clear_session, read_session } from '../auth/session'
@@ -24,6 +24,12 @@ export default function useMatchState(match_id, on_protocol_message) {
   const navigate = useNavigate()
   const [view, set_view] = useState({ state: null, error: '', loading: true })
   const protocol_message_ref = useRef(on_protocol_message)
+  const send_ref = useRef(null)
+
+  const send_message = useCallback((message) => {
+    if (!send_ref.current) return false
+    return send_ref.current(message)
+  }, [])
   const socket_ref = useRef(null)
   const socket_open_ref = useRef(false)
 
@@ -48,7 +54,11 @@ export default function useMatchState(match_id, on_protocol_message) {
     let latest = null
     let attempts = 0
     let connected_session
-
+    send_ref.current = (message) => {
+      if (!socket || socket.readyState !== 1) return false
+      socket.send(JSON.stringify(message))
+      return true
+    }
     const disconnect = () => {
       clearTimeout(watchdog)
       if (socket) {
@@ -126,6 +136,10 @@ export default function useMatchState(match_id, on_protocol_message) {
               current.send(JSON.stringify({ type: 'pong' }))
               return
             }
+            if (message.type === 'error' && message.error_code && message.error_code.startsWith('BEHAVIOR_CHANGE_')) {
+              protocol_message_ref.current?.(event.data)
+              return
+            }
             if (message.type === 'error') {
               if (!Number.isInteger(message.status)) {
                 protocol_message_ref.current?.(event.data)
@@ -198,8 +212,9 @@ export default function useMatchState(match_id, on_protocol_message) {
       window.removeEventListener('storage', storage_changed)
       window.removeEventListener('focus', check_session)
       document.removeEventListener('visibilitychange', check_session)
+      send_ref.current = null
     }
   }, [match_id, navigate])
 
-  return { ...view, send_match_command }
+  return { ...view, send_message,send_match_command }
 }

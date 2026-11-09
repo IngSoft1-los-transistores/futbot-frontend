@@ -94,6 +94,19 @@
   .match-pitch { border-radius: 10px; }
   .match-panel { padding: 12px; }
 }
+.toast { position: fixed; right: 1rem; bottom: 1rem; z-index: 50; display: flex; gap: .75rem; align-items: center; padding: .75rem 1rem; border-radius: .5rem; color: #fff; }
+.toast--success { background: #1f7a3d; }
+.toast--error { background: #a02020; }
+.toast button { background: none; border: 0; color: inherit; cursor: pointer; }
+.change-behavior-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+.change-behavior-select { min-width: 160px; padding: 4px 8px; color: #0b2a16; background: #f3ecdd; border-radius: 6px; }
+.change-behavior-select option { color: #0b2a16; background: #f3ecdd; }
+.change-behavior-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+.change-behavior-btn { padding: 8px 20px; border: 1px solid #d49a53; border-radius: 8px; background: transparent; color: #f3ecdd; font: 600 14px 'IBM Plex Sans', sans-serif; cursor: pointer; }
+.change-behavior-btn:hover:not(:disabled) { background: #d49a5333; }
+.change-behavior-btn--primary { background: #d49a53; color: #0b2a16; }
+.change-behavior-btn--primary:hover:not(:disabled) { background: #e0ab6a; }
+.change-behavior-btn:disabled { opacity: .45; cursor: not-allowed; }
 .match-pitch-selected-ring {
   fill: none;
   stroke: #ffd166;
@@ -107,3 +120,4 @@
     opacity: 0.45;
   }
 }
+.match-change-behavior { display: flex; justify-content: center; }
