@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom'
 import Login from './pages/Login'
 import ForgotPasswordPage from './pages/forgot_password_page'
 import ResetPasswordPage from './pages/reset_password_page'
@@ -19,6 +19,7 @@ import LeaguesPage from './pages/leagues_page'
 import BehaviorEditorPage from './pages/behavior_editor_page'
 import OngoingLeagueLobbyView from './pages/league_active_room'
 import FriendlyListPage from './pages/friendly_list_page'
+import RankingPage from './pages/ranking_page'
 
 
 const Navbar = () => (
@@ -35,6 +36,7 @@ const Navbar = () => (
         <p className="font-plex-mono text-[11px] text-[#b5c2b3]">laboratorio / presión alta v4</p>
       </div>
     </div>
+    <Link to="/ranking" className="text-[#ffe28a] underline">Ranking de clubes</Link>
     <p className="flex items-center gap-2 font-plex-mono text-[10px] tracking-widest uppercase text-[#d8dccf]">
       <span className="w-1.5 h-1.5 rounded-full bg-[#7fae7f]" aria-hidden="true" />
       Vestuario digital abierto
@@ -95,6 +97,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/matches/:match_id" element={<Match />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/ranking" element={<DashboardLayout><RankingPage /></DashboardLayout>} />
         <Route path="/friendly/join" element={<JoinFriendly />} />
         <Route path="/friendly" element={<FriendlyListPage />} />
         <Route path="/ligas/:league_id/unirse" element={<JoinLeaguePage />} />

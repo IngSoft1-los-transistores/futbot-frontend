@@ -1,7 +1,6 @@
-import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { read_session } from '../auth/session';
-import { use_league_lobby_socket } from '../hooks/use_league_live_socket';
+import { useLeagueLobbySocket } from '../hooks/use_league_live_socket';
 import ChangeLineupModal from '../components/change_lineup_modal';
 import './league_active_room.css'
 import {useState} from "react";
@@ -10,12 +9,12 @@ export default function OngoingLeagueLobbyView() {
     const { league_id } = useParams();
     const navigate = useNavigate();
     const session = read_session();
-    const token = session?.access_token;
+    const token = session?.access_token ?? session?.token;
     const user_club_id = session?.club_id;
     const [lineup_open, set_lineup_open] = useState(false)
     const [lineup_notice, set_lineup_notice] = useState(null)
 
-    const { lobby_data, loading, error, last_toast } = use_league_lobby_socket(league_id, token);
+    const { lobby_data, loading, error, last_toast } = useLeagueLobbySocket(league_id, token);
     const { league_name, status, currentMatch, nextMatch, standings, calendar } = lobby_data || {};
 
     const my_squad = lobby_data?.my_squad ?? []
@@ -41,12 +40,6 @@ export default function OngoingLeagueLobbyView() {
     }
 
     
-    console.log({
-      status,
-      my_squad,
-      can_change_lineup,
-      lobby_data,
-    })
     return (
         <div className="lobby-view">
             {/* Toast sutil de notificación en tiempo real */}

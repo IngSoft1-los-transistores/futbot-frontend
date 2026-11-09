@@ -1,13 +1,15 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { read_session } from '../auth/session';
 
-export function use_league_lobby_socket(league_id, prop_token) {
+export function useLeagueLobbySocket(league_id, prop_token) {
     const [lobby_data, set_lobby_data] = useState(null);
     const [loading, set_loading] = useState(true);
     const [error, set_error] = useState(null);
     const [last_toast, set_last_toast] = useState(null);
     const ws_ref = useRef(null);
     const reconnect_timeout_ref = useRef(null);
+    const toast_timeout_ref = useRef(null);
+    const live_revision_ref = useRef(0);
 
     // Obtener y resolver el token de forma segura
     const resolve_token = useCallback(() => {
@@ -35,7 +37,8 @@ export function use_league_lobby_socket(league_id, prop_token) {
     }, []);
 
     // Fetch inicial HTTP con manejo robusto de autorización
-    const fetch_lobby = useCallback(async () => {
+    const fetch_lobby = useCallback(async (signal) => {
+        const initial_revision = live_revision_ref.current;
         const token = resolve_token();
         if (!token) {
             set_error('No hay sesión activa o token de autenticación.');
@@ -46,6 +49,7 @@ export function use_league_lobby_socket(league_id, prop_token) {
         try {
             set_loading(true);
             const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/leagues/${league_id}/live-lobby`, {
+                signal,
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -55,17 +59,30 @@ export function use_league_lobby_socket(league_id, prop_token) {
                 throw new Error(`Error al cargar el lobby (${response.status})`);
             }
             const data = await response.json();
-            set_lobby_data(data);
+            if (signal.aborted) return;
+            // El WS mantiene el estado vivo; la plantilla privada procede del HTTP.
+            if (initial_revision !== live_revision_ref.current) {
+                if (Object.hasOwn(data, 'my_squad')) {
+                    set_lobby_data(prev => ({ ...prev, my_squad: data.my_squad }));
+                }
+            } else {
+                set_lobby_data(data);
+            }
             set_error(null);
         } catch (err) {
+            if (signal.aborted || initial_revision !== live_revision_ref.current) return;
             set_error(err.message);
         } finally {
-            set_loading(false);
+            if (!signal.aborted) set_loading(false);
         }
     }, [league_id, resolve_token]);
 
     useEffect(() => {
-        fetch_lobby();
+        const controller = new AbortController();
+        // Reiniciar la carga al cambiar de liga también valida una sesión ausente.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        fetch_lobby(controller.signal);
+        return () => controller.abort();
     }, [fetch_lobby]);
 
     // Conexión WebSocket para tiempo real y reconexión automática
@@ -87,21 +104,25 @@ export function use_league_lobby_socket(league_id, prop_token) {
             ws_ref.current = ws;
 
             ws.onmessage = (event) => {
+                if (!is_connected || ws_ref.current !== ws) return;
                 try {
                     const message = JSON.parse(event.data);
                     
                     if (message.type ==='league_lobby_update' || message.type === 'match_update' || message.type === 'league_update' || message.payload) {
-                        set_lobby_data(prev => {
-                            if (!prev) return prev;
-                            return {
-                                ...prev,
-                                ...message.payload
-                            };
-                        });
+                        // El backend emite snapshots planos; admitir también eventos envueltos.
+                        const payload = message.payload ?? message;
+                        // El broadcast no es personalizado: su my_squad no es el del usuario.
+                        const live_data = { ...payload };
+                        delete live_data.my_squad;
+                        live_revision_ref.current += 1;
+                        set_lobby_data(prev => ({ ...prev, ...live_data }));
+                        set_loading(false);
+                        set_error(null);
 
-                        if (message.toast || message.payload?.finished_match_summary) {
-                            set_last_toast(message.toast || message.payload.finished_match_summary);
-                            setTimeout(() => set_last_toast(null), 5000);
+                        if (message.toast || payload.finished_match_summary) {
+                            set_last_toast(message.toast || payload.finished_match_summary);
+                            clearTimeout(toast_timeout_ref.current);
+                            toast_timeout_ref.current = setTimeout(() => set_last_toast(null), 5000);
                         }
                     }
                 } catch (e) {
@@ -133,6 +154,7 @@ export function use_league_lobby_socket(league_id, prop_token) {
             if (reconnect_timeout_ref.current) {
                 clearTimeout(reconnect_timeout_ref.current);
             }
+            clearTimeout(toast_timeout_ref.current);
         };
     }, [league_id, resolve_token, resolve_club_id]);
 
