@@ -17,6 +17,7 @@ import JoinLeaguePage from './pages/join_league_page'
 import LeagueWaitingRoom from './pages/league_waiting_room'
 import LeaguesPage from './pages/leagues_page'
 import BehaviorEditorPage from './pages/behavior_editor_page'
+import OngoingLeagueLobbyView from './pages/league_active_room'
 import FriendlyListPage from './pages/friendly_list_page'
 
 
@@ -100,6 +101,7 @@ export default function App() {
         <Route path="/amistosos/:room_id/sala" element={<DashboardLayout><FriendlyRoomPage /></DashboardLayout>} />
         <Route path="/partidos/:match_id" element={<Match />} />
         <Route path="/league/:league_id/waiting" element={<LeagueWaitingRoom />}/>
+        <Route path="/league/:league_id/live" element={<DashboardLayout><OngoingLeagueLobbyView /></DashboardLayout>} />
         <Route path="/leagues" element={<LeaguesPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
