@@ -14,7 +14,7 @@ export default function OngoingLeagueLobbyView() {
     const [lineup_open, set_lineup_open] = useState(false)
     const [lineup_notice, set_lineup_notice] = useState(null)
 
-    const { lobby_data, loading, error, last_toast } = use_league_lobby_socket(league_id, token);
+    const { lobby_data, loading, error, last_toast } = useLeagueLobbySocket(league_id, token);
     const { league_name, status, currentMatch, nextMatch, standings, calendar } = lobby_data || {};
 
     const my_squad = lobby_data?.my_squad ?? []
@@ -40,12 +40,6 @@ export default function OngoingLeagueLobbyView() {
     }
 
     
-    console.log({
-      status,
-      my_squad,
-      can_change_lineup,
-      lobby_data,
-    })
     return (
         <div className="lobby-view">
             {/* Toast sutil de notificación en tiempo real */}
