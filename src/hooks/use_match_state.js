@@ -35,10 +35,19 @@ export default function useMatchState(match_id, on_protocol_message) {
     }
     return send_ref.current(message)
   }, [])
+  const socket_ref = useRef(null)
+  const socket_open_ref = useRef(false)
 
   useEffect(() => {
     protocol_message_ref.current = on_protocol_message
   }, [on_protocol_message])
+
+  const send_match_command = useCallback((command) => {
+    if (!socket_ref.current || !socket_open_ref.current) {
+      throw new Error('La conexión del partido no está disponible. Intentá nuevamente.')
+    }
+    socket_ref.current.send(JSON.stringify(command))
+  }, [])
 
   useEffect(() => {
     let disposed = false
@@ -58,6 +67,10 @@ export default function useMatchState(match_id, on_protocol_message) {
     const disconnect = () => {
       clearTimeout(watchdog)
       if (socket) {
+        if (socket_ref.current === socket) {
+          socket_ref.current = null
+          socket_open_ref.current = false
+        }
         socket.onopen = socket.onmessage = socket.onerror = socket.onclose = null
         socket.close()
         socket = null
@@ -110,9 +123,12 @@ export default function useMatchState(match_id, on_protocol_message) {
       try {
         const current = connect_match_state(match_id)
         socket = current
+        socket_ref.current = current
+        socket_open_ref.current = false
         arm_watchdog(10000)
         current.onopen = () => {
           if (socket !== current || disposed) return
+          socket_open_ref.current = true
           protocol_message_ref.current?.({ type: 'connection', value: 'open' })
           current.send(JSON.stringify({ type: 'auth', token: connected_session.access_token }))
         }
@@ -132,6 +148,10 @@ export default function useMatchState(match_id, on_protocol_message) {
               return
             }
             if (message.type === 'error') {
+              if (!Number.isInteger(message.status)) {
+                protocol_message_ref.current?.(event.data)
+                return
+              }
               if (message.status === 401) { reject_session(); return }
               if (terminal_errors[message.status]) {
                 stopped = true
@@ -167,6 +187,10 @@ export default function useMatchState(match_id, on_protocol_message) {
         }
         current.onerror = retry
         current.onclose = (event) => {
+          if (socket_ref.current === current) {
+            socket_ref.current = null
+            socket_open_ref.current = false
+          }
           if (event.code === 4401) { reject_session(); return }
           const status = { 4403: 403, 4404: 404, 4422: 422 }[event.code]
           if (status) {
@@ -199,5 +223,5 @@ export default function useMatchState(match_id, on_protocol_message) {
     }
   }, [match_id, navigate])
 
-  return { ...view, send_message }
+  return { ...view, send_message,send_match_command }
 }

@@ -4,10 +4,12 @@ import { getMyPlayers, getMyBehaviors } from '../api/friendly';
 import { validate_league } from './league_validation';
 import SquadSelector from './SquadSelector';
 import { createLeague } from '../api/leagues';
+import MiniPitchViewer from './mini_pitch_viewer';
 
 const INITIAL_FORM = {
   name: '',
   is_private: false,
+  has_penalty_shootout: false,
   password: '',
   min_clubs: '',
   max_clubs: '',
@@ -72,7 +74,7 @@ export default function CreateLeagueForm({ onCancel }) {
   const [server_error, setServer_error] = useState(null);
   const [created_league, setCreated_league] = useState(null);
   const [copied, setCopied] = useState(false);
-
+  const [preview_selection, setPreview_selection] = useState(null);
   const errors = validate_league({ ...form, ...squad });
 
   // Carga los jugadores y comportamientos del club al montar el formulario
@@ -151,12 +153,25 @@ export default function CreateLeagueForm({ onCancel }) {
     }
   };
 
+  //
+  const handle_preview = async(slot) => {
+    setServer_error(null);
+    setPreview_selection({
+      playerId: slot.playerId,
+      behaviorId: slot.behaviorId,
+    });
+  };
+
   // Caso de éxito: informa que la liga fue creada y muestra el código para unirse
   if (created_league) {
     return (
       <div className="grid gap-3 text-white">
         <h3 className="text-lg font-semibold">¡Liga creada correctamente!</h3>
-        <p className="text-sm">Compartí este código para que otros clubes se unan:</p>
+        <p className="text-sm">
+          {created_league.is_private
+            ? 'Compartí este código y la contraseña para que otros clubes se unan:'
+            : 'Compartí este código para que otros clubes se unan:'}
+        </p>
         <div className="flex items-center justify-between rounded-[5px] border border-[#2F5A36] bg-[#0F2416] px-3 py-2 font-mono">
           <span>{created_league.code_to_join}</span>
           <button
@@ -187,6 +202,14 @@ export default function CreateLeagueForm({ onCancel }) {
   }
 
   return (
+    <>
+    {preview_selection && (
+    <MiniPitchViewer
+      player_id={preview_selection.playerId}
+      behavior_id={preview_selection.behaviorId}
+      onClose={() => setPreview_selection(null)}
+    />
+    )}
     <form onSubmit={handle_submit} className="grid grid-cols-2 gap-3">
       <div className="col-span-2">
         <label htmlFor="name" className={label_class}>Nombre de la liga</label>
@@ -262,6 +285,23 @@ export default function CreateLeagueForm({ onCancel }) {
         </label>
       </div>
 
+      <div className="col-span-2">
+        <label htmlFor="has_penalty_shootout" className={`${label_class} flex items-center gap-2`}>
+          <input
+            id="has_penalty_shootout"
+            name="has_penalty_shootout"
+            type="checkbox"
+            checked={form.has_penalty_shootout}
+            onChange={handle_change}
+          />
+          Definición por penales (Sin empates)
+        </label>
+        <p className="text-xs text-[#C9D6C5]">
+          En caso de empate se jugarán penales australianos. Ganar en tiempo regular
+          otorga 3 puntos, ganar en penales otorga 2 puntos y perder 0 puntos
+        </p>
+      </div>
+
       {form.is_private && (
         <div className="col-span-2">
           <label htmlFor="password" className={label_class}>Contraseña</label>
@@ -284,6 +324,7 @@ export default function CreateLeagueForm({ onCancel }) {
           behaviors={behaviors}
           squad={squad}
           setSquad={setSquad}
+          onPreview={handle_preview}
         />
         {submitted &&
           SQUAD_ERROR_KEYS.map(
@@ -316,5 +357,6 @@ export default function CreateLeagueForm({ onCancel }) {
         </button>
       </div>
     </form>
+    </>
   );
 }
