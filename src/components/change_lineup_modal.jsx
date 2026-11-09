@@ -55,68 +55,96 @@ export default function ChangeLineupModal({ league_id, squad, onClose, onSuccess
   }
 
   return (
-    <div className="lineup-modal-overlay" role="dialog" aria-modal="true">
+    <div className="lineup-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="lineup-title">
       <div className="lineup-modal">
-        <form onSubmit={handle_submit}>
+        <div className="lineup-modal-header">
+          <h2 id="lineup-title">Cambiar Alineación</h2>
+          <button type="button" className="btn-close-x" onClick={onClose} aria-label="Cerrar modal">
+            ✕
+          </button>
+        </div>
 
-          <div role="dialog" aria-modal="true" aria-labelledby="lineup-title">
-            <form onSubmit={handle_submit}>
-              <h2 id="lineup-title">Cambiar alineación</h2>
-              <div>
-                <h3>Titulares: {starters.length}/3</h3>
-                {starters.map((player) => (
-                  <div key={player.player_id}>
-                    <span>{player.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => move_to_substitutes(player)}
-                      aria-label={`Mover ${player.name} a suplentes`}
-                    >
-                      ↓
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-            <div>
-              <h3>Suplentes: {substitutes.length}/3</h3>
-
-              {substitutes.map((player) => (
-                <div key={player.player_id}>
-                  <span>{player.name}</span>
+        <form onSubmit={handle_submit} className="lineup-modal-form">
+          {/* Sección Titulares */}
+          <div className="lineup-section">
+            <div className="lineup-section-header">
+              <h3>Titulares</h3>
+              <span className={`counter-badge ${starters.length === 3 ? 'valid' : 'invalid'}`}>
+                {starters.length}/3
+              </span>
+            </div>
+            <div className="player-list">
+              {starters.map((player) => (
+                <div key={player.player_id} className="player-card starter">
+                  <span className="player-name">{player.name}</span>
                   <button
                     type="button"
-                    onClick={() => move_to_starters(player)}
-                    aria-label={`Mover ${player.name} a titulares`}
+                    className="btn-move to-sub"
+                    onClick={() => move_to_substitutes(player)}
+                    aria-label={`Mover ${player.name} a suplentes`}
+                    title="Pasar a Suplentes"
                   >
-                    ↑
+                    ↓ Suplente
                   </button>
                 </div>
               ))}
             </div>
-            {!is_valid && (
-              <p role="alert">
-                Debes seleccionar exactamente 3 titulares y 3 suplentes.
-              </p>
-            )}
+          </div>
 
-            {error && <p role="alert">{error}</p>}
+          {/* Sección Suplentes */}
+          <div className="lineup-section">
+            <div className="lineup-section-header">
+              <h3>Suplentes</h3>
+              <span className={`counter-badge ${substitutes.length === 3 ? 'valid' : 'invalid'}`}>
+                {substitutes.length}/3
+              </span>
+            </div>
+            <div className="player-list">
+              {substitutes.map((player) => (
+                <div key={player.player_id} className="player-card substitute">
+                  <span className="player-name">{player.name}</span>
+                  <button
+                    type="button"
+                    className="btn-move to-starter"
+                    onClick={() => move_to_starters(player)}
+                    aria-label={`Mover ${player.name} a titulares`}
+                    title="Pasar a Titulares"
+                  >
+                    ↑ Titular
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
 
-            <p>
-              El cambio regirá desde tu próximo partido.
+          {/* Mensajes de Estado */}
+          {!is_valid && (
+            <p className="lineup-alert warning" role="alert">
+              ⚠️ Debes seleccionar exactamente 3 titulares y 3 suplentes.
             </p>
+          )}
 
-            <button type="button" onClick={onClose}>
+          {error && (
+            <p className="lineup-alert error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <p className="lineup-notice">
+            💡 El cambio regirá desde tu próximo partido.
+          </p>
+
+          {/* Botones de Acción */}
+          <div className="lineup-modal-actions">
+            <button type="button" className="btn-secondary" onClick={onClose}>
               Cancelar
             </button>
-
-            <button type="submit" disabled={!is_valid || saving}>
+            <button type="submit" className="btn-primary" disabled={!is_valid || saving}>
               {saving ? 'Guardando...' : 'Confirmar alineación'}
             </button>
+          </div>
         </form>
       </div>
-    </form>
     </div>
-  </div>
   )
 }
