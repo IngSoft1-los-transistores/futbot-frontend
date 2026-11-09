@@ -6,6 +6,12 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import useMatchState from '../hooks/use_match_state'
 import PauseBanner from '../components/pause_banner'
 import MatchPitch from '../components/match_pitch'
+import ChangeBehaviorModal from '../components/change_behavior_modal'
+import { build_change_behavior_message } from '../match/change_behavior_message'
+import { get_my_starters } from '../match/my_starters'
+import Toast from '../components/toast'
+import { parse_change_result } from '../match/change_behavior_result'
+import PenaltyShootout from '../components/PenaltyShootout'
 import LiveMatchControls from '../components/LiveMatchControls'
 import SubstitutionModal from '../components/SubstitutionModal'
 import './Match.css'
@@ -42,6 +48,10 @@ const protocol_initial_state = {
   pending_substitutions: { HOME: null, AWAY: null },
   changes_used_this_pause: { HOME: false, AWAY: false },
   substitution_last_applied: null,
+  penalties: { active: false, completed: false, attempts: { HOME: 0, AWAY: 0 },
+    scores: { HOME: 0, AWAY: 0 }, results: { HOME: [], AWAY: [] },
+    max_attempts: 5, max_seconds_per_attempt: 10, tick_rate: 1,
+    start_revision: null, winner: null },
 }
 const remember_event = (state, event) => ({ ...state, events: [event, ...state.events].slice(0, 30) })
 const protocol_players = (players) => Object.fromEntries(players.map(normalize_player).filter(Boolean).map((player) => [player.id, player]))
@@ -58,6 +68,7 @@ function parse_match_message(raw) {
     'MATCH_CONNECTED', 'MATCH_STARTED', 'SIMULATION_TICK', 'GOAL_SCORED',
     'PAUSE_STARTED', 'PAUSE_ENDED', 'MATCH_RESUMED', 'CLIENT_DISCONNECTED',
     'MATCH_FINISHED', 'ERROR', 'SUBSTITUTION_SCHEDULED', 'SUBSTITUTION_APPLIED',
+    'PENALTIES_STARTED', 'PENALTY_SHOT_RESULT', 'PENALTIES_FINISHED',
   ].includes(event)
     ? { event, payload: message }
     : null
@@ -72,6 +83,7 @@ function protocol_reducer(state, action) {
     'MATCH_CONNECTED', 'MATCH_STARTED', 'SIMULATION_TICK', 'GOAL_SCORED',
     'PAUSE_STARTED', 'PAUSE_ENDED', 'MATCH_RESUMED', 'CLIENT_DISCONNECTED',
     'MATCH_FINISHED', 'ERROR', 'SUBSTITUTION_SCHEDULED', 'SUBSTITUTION_APPLIED',
+    'PENALTIES_STARTED', 'PENALTY_SHOT_RESULT', 'PENALTIES_FINISHED',
   ].includes(action.message.event)) return state
   state = { ...state, received: true }
   const { event, payload } = action.message
@@ -141,6 +153,52 @@ function protocol_reducer(state, action) {
       return remember_event(state, { type: 'client_disconnected', club_id: payload.clubId, message: payload.message })
     case 'MATCH_FINISHED':
       return { ...state, status: 'finished', pause: null, score: normalize_score(payload.finalScore) ?? state.score }
+    case 'PENALTIES_STARTED':
+      return {
+        ...state,
+        status: 'paused',
+        penalties: {
+          ...protocol_initial_state.penalties,
+          active: true,
+          start_revision: Number.isInteger(action.server_revision) ? action.server_revision : null,
+          max_attempts: Number.isInteger(payload.maxAttemptsPerTeam) && payload.maxAttemptsPerTeam > 0
+            ? payload.maxAttemptsPerTeam : protocol_initial_state.penalties.max_attempts,
+          max_seconds_per_attempt: is_num(payload.maxSecondsPerAttempt) && payload.maxSecondsPerAttempt > 0
+            ? payload.maxSecondsPerAttempt : protocol_initial_state.penalties.max_seconds_per_attempt,
+          tick_rate: is_num(payload.tickRate) && payload.tickRate > 0
+            ? payload.tickRate : protocol_initial_state.penalties.tick_rate,
+        },
+      }
+    case 'PENALTY_SHOT_RESULT': {
+      const penalty_team = normalize_team(payload.team)
+      if (!penalty_team) return state
+      const attempts = is_obj(payload.attempts) && Number.isInteger(payload.attempts[penalty_team])
+        ? payload.attempts[penalty_team]
+        : state.penalties.attempts[penalty_team] + 1
+      const scores = is_obj(payload.score) && Number.isInteger(payload.score[penalty_team])
+        ? payload.score[penalty_team]
+        : state.penalties.scores[penalty_team] + (payload.status === 'scored' ? 1 : 0)
+      const results = [...state.penalties.results[penalty_team]]
+      if (attempts > 0 && attempts <= state.penalties.max_attempts &&
+          ['scored', 'missed'].includes(payload.status)) {
+        results[attempts - 1] = payload.status
+      }
+      return {
+        ...state,
+        penalties: {
+          ...state.penalties,
+          active: true,
+          attempts: { ...state.penalties.attempts, [penalty_team]: attempts },
+          scores: { ...state.penalties.scores, [penalty_team]: scores },
+          results: { ...state.penalties.results, [penalty_team]: results },
+          start_revision: Number.isInteger(action.server_revision)
+            ? action.server_revision + 1
+            : state.penalties.start_revision,
+        },
+      }
+    }
+    case 'PENALTIES_FINISHED':
+      return { ...state, penalties: { ...state.penalties, active: true, completed: true, winner: normalize_team(payload.winner) } }
     case 'ERROR': {
       if (payload.team != null && (!team || team !== action.own_team)) return state
       const message = String(payload.message ?? 'Error de ejecución')
@@ -160,6 +218,11 @@ function protocol_reducer(state, action) {
 
 function MatchView({ match_id, room_behavior_names }) {
   const [protocol_state, dispatch_protocol] = useReducer(protocol_reducer, protocol_initial_state)
+  const [behavior_list, set_behavior_list] = useState([])
+  const [change_open, set_change_open] = useState(false)
+  const [toast, set_toast] = useState(null)
+  const [submitting_changes, set_submitting_changes] = useState(false)
+  const close_toast = useCallback(() => set_toast(null), [])
   const [substitution_open, set_substitution_open] = useState(false)
   const [selected_out, set_selected_out] = useState(null)
   const [selected_in, set_selected_in] = useState(null)
@@ -167,11 +230,43 @@ function MatchView({ match_id, room_behavior_names }) {
   const [substitution_error, set_substitution_error] = useState('')
   const own_club_id = useMemo(() => read_session()?.club_id, [])
   const own_team_ref = useRef(null)
+  const pending_behavior_changes_ref = useRef(new Set())
+  const state_revision_ref = useRef(null)
   const receive_protocol_message = useCallback((raw) => {
     if (raw?.type === 'connection') {
       dispatch_protocol({ type: 'connection', value: raw.value })
       return
     }
+    const change_result = parse_change_result(raw)
+    if (change_result) {
+      const pending = pending_behavior_changes_ref.current
+
+      if (!change_result.ok) {
+        pending.clear()
+        set_submitting_changes(false)
+        set_toast({ type: 'error', message: change_result.message })
+        return
+      }
+
+      const player_id =
+        change_result.playerId ?? pending.values().next().value
+
+      if (player_id == null || !pending.has(player_id)) return
+
+      pending.delete(player_id)
+
+      if (pending.size === 0) {
+        set_submitting_changes(false)
+        set_change_open(false)
+        set_toast({
+          type: 'success',
+          message: 'Comportamiento actualizado para el siguiente tick',
+        })
+      }
+
+      return
+    }
+
     const message = parse_match_message(raw)
     if (message) {
       const team = normalize_team(message.payload.team)
@@ -186,15 +281,23 @@ function MatchView({ match_id, room_behavior_names }) {
         set_submitting_substitution(false)
         set_substitution_error(String(message.payload.message ?? 'Error de sustitución'))
       }
-      dispatch_protocol({ type: 'message', message, own_team: own_team_ref.current })
+      dispatch_protocol({
+        type: 'message',
+        message,
+        own_team: own_team_ref.current,
+        server_revision: state_revision_ref.current,
+      })
     }
   }, [])
-  const { state, error, loading, waiting_for_start, send_match_command } = useMatchState(match_id, receive_protocol_message)
+  const { state, error, loading, waiting_for_start, send_message,send_match_command} = useMatchState(match_id, receive_protocol_message)
   const own_team = state && own_club_id === state.home_club.club_id ? 'HOME'
     : state && own_club_id === state.away_club.club_id ? 'AWAY' : null
   useEffect(() => {
     own_team_ref.current = own_team
   }, [own_team])
+  useEffect(() => {
+    state_revision_ref.current = state?.revision ?? null
+  }, [state?.revision])
   const [retrying_start, set_retrying_start] = useState(false)
   const [start_error, set_start_error] = useState('')
   const previous_status = useRef(null)
@@ -233,13 +336,51 @@ function MatchView({ match_id, room_behavior_names }) {
     get_behaviors({ signal: controller.signal }).then((behaviors) => {
       if (controller.signal.aborted) return
       set_behavior_names(Object.fromEntries(behaviors.map(({ id, name }) => [id, name])))
+      set_behavior_list(behaviors)
     }).catch(() => {
       // El catálogo puede no incluir comportamientos privados del rival.
       // Su ausencia no debe interrumpir la transmisión del partido.
-      if (!controller.signal.aborted) set_behavior_names({})
+      if (!controller.signal.aborted) {
+        set_behavior_names({})
+        set_behavior_list([])
+      }
     })
+    
     return () => controller.abort()
   }, [has_state])
+
+  function confirm_changes(changes) {
+    if (
+      !Array.isArray(changes) ||
+      changes.length === 0 ||
+      submitting_changes
+    ) {
+      return
+    }
+
+    const pending = new Set(changes.map(({ playerId }) => playerId))
+    pending_behavior_changes_ref.current = pending
+    set_submitting_changes(true)
+
+    try {
+      for (const { playerId, behaviorId } of changes) {
+        const message = build_change_behavior_message(playerId, behaviorId)
+
+        if (!send_message(message)) {
+          throw new Error(
+            'No se pudo enviar el cambio. Verificá la conexión.'
+          )
+        }
+      }
+    } catch (cause) {
+      pending_behavior_changes_ref.current.clear()
+      set_submitting_changes(false)
+      set_toast({
+        type: 'error',
+        message: cause.message || 'No se pudieron enviar los cambios.',
+      })
+    }
+  }
 
   const behavior_name = (player) => player.behavior_name?.trim() || behavior_names[player.behavior_id] || room_behavior_names?.[player.behavior_id] || 'Nombre no disponible'
   const encounter = state ? `${state.home_club.name} vs. ${state.away_club.name}` : 'Estado del partido'
@@ -311,20 +452,52 @@ function MatchView({ match_id, room_behavior_names }) {
             <h2><i className="match-team-color match-team-color--away" aria-hidden="true" />{state.away_club.name}</h2>
           </div>
           <div className="match-clock"><span className={`match-status match-status--${state.status}`}>{statuses[state.status]}</span><time aria-label="Tiempo transcurrido">{time(state.current_time)}</time></div>
-        </section>
-        <LiveMatchControls
-          status={state.status}
-          visible={Boolean(own_team)}
-          disabled={team_coach_active}
-          onOpen={open_substitutions}
-        />
-        <div className="match-pitch-stage">
-          {/* current_time is frozen during a pause, so the key only changes when a new pause starts. */}
-          {state.status === 'paused' && <PauseBanner key={`${state.phase}-${state.current_time}`} phase={state.phase} pause_duration={state.pause_duration} pause_remaining={state.pause_remaining} />}
-          <MatchPitch state={state} protocol_state={protocol_state} />
-        </div>
-        <div className="match-pitch-footer"><Link to="/home">← Volver al menú</Link><span>Restante: <time>{time(state.remaining_time)}</time></span></div>
-        <details className="match-details">
+        </section>            
+          <LiveMatchControls
+            status={state.status}
+            visible={Boolean(own_team) && !protocol_state.penalties.active}
+            disabled={team_coach_active}
+            onOpen={open_substitutions}
+          />
+          <PenaltyShootout
+            penalties={protocol_state.penalties}
+            home_name={state.home_club.name}
+            away_name={state.away_club.name}
+            revision={state.revision}
+          />
+          <div className="match-pitch-stage">
+            {/* current_time is frozen during a pause, so the key only changes when a new pause starts. */}
+            {state.status === 'paused' && <PauseBanner key={`${state.phase}-${state.current_time}`} phase={state.phase} pause_duration={state.pause_duration} pause_remaining={state.pause_remaining} />}
+            <MatchPitch
+              state={state}
+              protocol_state={protocol_state}
+              penalties_active={protocol_state.penalties.active}
+            />
+          </div>
+          <div className="match-pitch-footer"><Link to="/home">← Volver al menú</Link><span>Restante: <time>{time(state.remaining_time)}</time></span></div>
+          <div className="match-change-behavior">
+            {state.status !== 'finished' && (
+              <button
+                type="button"
+                className="home-action"
+                disabled={behavior_list.length === 0 || submitting_changes}
+                onClick={() => set_change_open(true)}
+              >
+                Cambiar comportamiento
+              </button>
+            )}
+          </div>
+          {change_open && (
+            <ChangeBehaviorModal
+              starters={get_my_starters(state, read_session()?.club_id)}
+              behaviors={behavior_list}
+              submitting={submitting_changes}
+              on_confirm={confirm_changes}
+              on_close={() => set_change_open(false)}
+            />
+          )}
+
+          <details className="match-details">
           <summary>Jugadores y acciones del partido</summary>
         <div className="match-teams">
           {[state.home_club, state.away_club].map((club) => <section className="match-panel" key={club.club_id}>
@@ -380,6 +553,7 @@ function MatchView({ match_id, room_behavior_names }) {
         <div className="match-toast" role="status" aria-live="polite">{protocol_state.toast}</div>
       )}
       </main>
+      {toast && <Toast type={toast.type} message={toast.message} on_close={close_toast} />}
     </div>
   )
 }

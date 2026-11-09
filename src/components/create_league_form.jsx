@@ -4,6 +4,7 @@ import { getMyPlayers, getMyBehaviors } from '../api/friendly';
 import { validate_league } from './league_validation';
 import SquadSelector from './SquadSelector';
 import { createLeague } from '../api/leagues';
+import MiniPitchViewer from './mini_pitch_viewer';
 
 const INITIAL_FORM = {
   name: '',
@@ -73,7 +74,7 @@ export default function CreateLeagueForm({ onCancel }) {
   const [server_error, setServer_error] = useState(null);
   const [created_league, setCreated_league] = useState(null);
   const [copied, setCopied] = useState(false);
-
+  const [preview_selection, setPreview_selection] = useState(null);
   const errors = validate_league({ ...form, ...squad });
 
   // Carga los jugadores y comportamientos del club al montar el formulario
@@ -152,6 +153,15 @@ export default function CreateLeagueForm({ onCancel }) {
     }
   };
 
+  //
+  const handle_preview = async(slot) => {
+    setServer_error(null);
+    setPreview_selection({
+      playerId: slot.playerId,
+      behaviorId: slot.behaviorId,
+    });
+  };
+
   // Caso de éxito: informa que la liga fue creada y muestra el código para unirse
   if (created_league) {
     return (
@@ -192,6 +202,14 @@ export default function CreateLeagueForm({ onCancel }) {
   }
 
   return (
+    <>
+    {preview_selection && (
+    <MiniPitchViewer
+      player_id={preview_selection.playerId}
+      behavior_id={preview_selection.behaviorId}
+      onClose={() => setPreview_selection(null)}
+    />
+    )}
     <form onSubmit={handle_submit} className="grid grid-cols-2 gap-3">
       <div className="col-span-2">
         <label htmlFor="name" className={label_class}>Nombre de la liga</label>
@@ -306,6 +324,7 @@ export default function CreateLeagueForm({ onCancel }) {
           behaviors={behaviors}
           squad={squad}
           setSquad={setSquad}
+          onPreview={handle_preview}
         />
         {submitted &&
           SQUAD_ERROR_KEYS.map(
@@ -338,5 +357,6 @@ export default function CreateLeagueForm({ onCancel }) {
         </button>
       </div>
     </form>
+    </>
   );
 }

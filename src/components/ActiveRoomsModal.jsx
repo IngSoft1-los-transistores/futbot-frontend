@@ -68,7 +68,7 @@ export default function ActiveRoomsModal({ open, onClose }) {
       navigate('/friendly/join', { state: { room_id: room.id, code: room.code } });
     } else {
       if (room.status === 'in_progress') {
-        navigate(`/league/${room.id}/active`);
+        navigate(`/league/${room.id}/live`);
       } else {
         navigate(`/league/${room.id}/waiting`);
       }

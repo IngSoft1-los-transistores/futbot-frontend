@@ -27,6 +27,7 @@ const mount = () => render(<MemoryRouter initialEntries={['/matches/match-1']}><
   <Route path="/login" element={<p>Inicio de sesión</p>} />
 </Routes></MemoryRouter>)
 class Socket {
+  readyState = 1
   send = vi.fn()
   close = vi.fn()
   open() { this.onopen?.() }
@@ -202,6 +203,76 @@ describe('Estado del partido por WebSocket', () => {
     expect(screen.getByRole('button', { name: /Confirmar cambio/ })).toBeDisabled()
   })
 
+  it('aisla el duelo de penales y actualiza el marcador de aciertos y fallos', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state({ status: 'paused' }) })
+    await emit(() => sockets[0].message({
+      type: 'PENALTIES_STARTED', maxAttemptsPerTeam: 5, maxSecondsPerAttempt: 10, tickRate: 10,
+    }))
+    await emit(() => sockets[0].state({
+      revision: 2,
+      status: 'paused',
+      players: snapshot().players.map((player, index) => ({
+        ...player,
+        on_field: index < 2,
+        position: index < 2 ? player.position : null,
+      })),
+    }))
+
+    expect(screen.getByRole('heading', { name: 'Tanda de penales' })).toBeInTheDocument()
+    const duel_players = Array.from(document.querySelectorAll('.match-pitch-player'))
+    expect(duel_players).toHaveLength(2)
+    expect(duel_players.map((player) => player.querySelector('title').textContent))
+      .toEqual(expect.arrayContaining(['Jugador 01 · Local FC', 'Jugador 02 · Local FC']))
+    expect(screen.getAllByLabelText(/Penal [1-5]: pendiente/)).toHaveLength(10)
+
+    await emit(() => sockets[0].message({
+      type: 'PENALTY_SHOT_RESULT',
+      status: 'scored',
+      team: 'HOME',
+      attempts: { HOME: 1, AWAY: 0 },
+      score: { HOME: 1, AWAY: 0 },
+      shooterId: 'p1',
+      goalkeeperId: 'p2',
+    }))
+    expect(screen.getByLabelText('Penal 1: gol')).toHaveClass('penalty-attempt--scored')
+    expect(screen.getByLabelText('Local FC: 1 goles')).toBeInTheDocument()
+
+    await emit(() => sockets[0].message({
+      type: 'PENALTY_SHOT_RESULT',
+      status: 'missed',
+      team: 'AWAY',
+      attempts: { HOME: 1, AWAY: 1 },
+      score: { HOME: 1, AWAY: 0 },
+      shooterId: 'p2',
+      goalkeeperId: 'p1',
+    }))
+    expect(screen.getByLabelText('Penal 1: fallo')).toHaveClass('penalty-attempt--missed')
+    expect(screen.getByLabelText('Visitante FC: 0 goles')).toBeInTheDocument()
+  })
+
+  it('cuenta atrás desde el tiempo anunciado por el backend y reinicia al siguiente penal', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state({ status: 'paused' }) })
+    await emit(() => sockets[0].message({
+      type: 'PENALTIES_STARTED', maxAttemptsPerTeam: 5, maxSecondsPerAttempt: 10, tickRate: 10,
+    }))
+    expect(screen.getByLabelText('Tiempo restante del penal')).toHaveTextContent('10')
+    await emit(() => sockets[0].state({ revision: 31, status: 'paused' }))
+    expect(screen.getByLabelText('Tiempo restante del penal')).toHaveTextContent('7')
+    await emit(() => sockets[0].state({ revision: 101, status: 'paused' }))
+    expect(screen.getByLabelText('Tiempo restante del penal')).toHaveTextContent('0')
+
+    await emit(() => sockets[0].message({
+      type: 'PENALTY_SHOT_RESULT',
+      status: 'missed',
+      team: 'HOME',
+      attempts: { HOME: 1, AWAY: 0 },
+      score: { HOME: 0, AWAY: 0 },
+    }))
+    expect(screen.getByLabelText('Tiempo restante del penal')).toHaveTextContent('10')
+  })
+
   it('conserva el último estado al desconectarse y recupera el snapshot al reconectar', async () => {
     mount()
     await emit(() => sockets[0].state())
@@ -303,6 +374,86 @@ describe('Estado del partido por WebSocket', () => {
     expect(sockets).toHaveLength(1)
     expect(sockets[0].onmessage).toBeNull()
     expect(sockets[0].close).toHaveBeenCalled()
+  })
+  
+  it('envía CHANGE_BEHAVIOR por el socket al confirmar el modal', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Jugador 01'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
+    expect(sockets[0].send).toHaveBeenCalledWith(
+      JSON.stringify({ action: 'CHANGE_BEHAVIOR', payload: { playerId: 'p1', behaviorId: 'b2' } }),
+    )
+  })
+
+  it('un error tras CHANGE_BEHAVIOR no corta la vista del partido', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Jugador 01'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
+    await emit(() => sockets[0].message({ type: 'error', ok: false, error_code: 'BEHAVIOR_CHANGE_BEHAVIOR_UNAVAILABLE', message: 'Comportamiento no disponible' }))
+    expect(sockets[0].close).not.toHaveBeenCalled()
+    expect(screen.queryByText('El partido no existe.')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Marcador: 0 a 0')).toBeInTheDocument()
+  })
+
+  it('cierra el modal y muestra un aviso de éxito al recibir el acuse', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Jugador 01'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
+    await emit(() => sockets[0].message({ event: 'BEHAVIOR_CHANGED', payload: { playerId: 'p1', behaviorId: 'b2' } }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Comportamiento actualizado')
+  })
+
+  it('muestra el error del servidor en un aviso y deja el modal abierto', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Jugador 01'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
+    await emit(() => sockets[0].message({ type: 'error', ok: false, error_code: 'BEHAVIOR_CHANGE_BEHAVIOR_UNAVAILABLE', message: 'Comportamiento no disponible' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Comportamiento no disponible')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('ignora SUBSTITUTION_STATE sin romper la vista ni mostrar avisos', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => sockets[0].message({ type: 'SUBSTITUTION_STATE' }))
+    expect(screen.getByLabelText('Marcador: 0 a 0')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('con varios cambios seguidos, un error posterior al primer acuse no corta la vista', async () => {
+    mount()
+    const players = [
+      snapshot().players[0],
+      { ...snapshot().players[0], player_id: 'p2', name: 'Beto' },
+    ]
+    await emit(() => { sockets[0].open(); sockets[0].state({ players }) })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Jugador 01'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Beto'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
+    await emit(() => sockets[0].message({ event: 'BEHAVIOR_CHANGED', payload: { playerId: 'p1', behaviorId: 'b2' } }))
+    await emit(() => sockets[0].message({ type: 'error', ok: false, error_code: 'BEHAVIOR_CHANGE_BEHAVIOR_UNAVAILABLE', message: 'Comportamiento no disponible' }))
+    expect(sockets[0].close).not.toHaveBeenCalled()
+    expect(screen.queryByText('El partido no existe.')).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Comportamiento no disponible')
+  })
+  it('un error con error_code del cambio de comportamiento nunca es terminal', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => sockets[0].message({ type: 'error', ok: false, error_code: 'BEHAVIOR_CHANGE_MATCH_NOT_RUNNING', message: 'El partido no está en curso' }))
+    expect(sockets[0].close).not.toHaveBeenCalled()
+    expect(screen.queryByText('El partido no existe.')).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('El partido no está en curso')
   })
 })
 
