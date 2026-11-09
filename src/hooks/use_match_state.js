@@ -25,14 +25,9 @@ export default function useMatchState(match_id, on_protocol_message) {
   const [view, set_view] = useState({ state: null, error: '', loading: true })
   const protocol_message_ref = useRef(on_protocol_message)
   const send_ref = useRef(null)
-  const pending_change_ref = useRef(false)
 
   const send_message = useCallback((message) => {
     if (!send_ref.current) return false
-    if (message.action === 'CHANGE_BEHAVIOR') {
-      pending_change_ref.current = true
-      setTimeout(() => { pending_change_ref.current = false }, 5000)
-    }
     return send_ref.current(message)
   }, [])
   const socket_ref = useRef(null)
@@ -141,9 +136,7 @@ export default function useMatchState(match_id, on_protocol_message) {
               current.send(JSON.stringify({ type: 'pong' }))
               return
             }
-            if (message.event === 'BEHAVIOR_CHANGED') pending_change_ref.current = false  
-            if (message.type === 'error' && message.status !== 401 && pending_change_ref.current) {
-              pending_change_ref.current = false
+            if (message.type === 'error' && message.error_code && message.error_code.startsWith('BEHAVIOR_CHANGE_')) {
               protocol_message_ref.current?.(event.data)
               return
             }

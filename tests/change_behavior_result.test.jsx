@@ -2,18 +2,19 @@ import { describe, it, expect } from 'vitest'
 import { parse_change_result } from '../src/match/change_behavior_result'
 
 describe('parse_change_result', () => {
-  it('reconoce el acuse de éxito', () => {
-    const raw = JSON.stringify({ event: 'BEHAVIOR_CHANGED', payload: { playerId: 'p1', behaviorId: 'b2' } })
-  })
-
-  it('devuelve el mensaje del servidor en un error', () => {
-    const raw = JSON.stringify({ type: 'error', status: 404, message: 'Comportamiento no disponible' })
+  it('devuelve el mensaje del servidor en un error del cambio', () => {
+    const raw = JSON.stringify({ type: 'error', ok: false, error_code: 'BEHAVIOR_CHANGE_BEHAVIOR_UNAVAILABLE', message: 'Comportamiento no disponible' })
     expect(parse_change_result(raw)).toEqual({ ok: false, message: 'Comportamiento no disponible' })
   })
 
   it('usa un mensaje por defecto si el error no trae texto', () => {
-    const raw = JSON.stringify({ type: 'error', status: 400 })
+    const raw = JSON.stringify({ type: 'error', ok: false, error_code: 'BEHAVIOR_CHANGE_INVALID_PLAYER' })
     expect(parse_change_result(raw).message).toBe('No se pudo cambiar el comportamiento')
+  })
+
+  it('ignora errores que no son del cambio de comportamiento', () => {
+    const raw = JSON.stringify({ type: 'error', status: 404, message: 'El partido no existe.' })
+    expect(parse_change_result(raw)).toBeNull()
   })
 
   it('devuelve null con otros mensajes o JSON inválido', () => {

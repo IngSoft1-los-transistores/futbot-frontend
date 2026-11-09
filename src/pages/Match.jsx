@@ -6,18 +6,14 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import useMatchState from '../hooks/use_match_state'
 import PauseBanner from '../components/pause_banner'
 import MatchPitch from '../components/match_pitch'
-<<<<<<< HEAD
-import { read_session } from '../auth/session'
 import ChangeBehaviorModal from '../components/change_behavior_modal'
 import { build_change_behavior_message } from '../match/change_behavior_message'
 import { get_my_starters } from '../match/my_starters'
 import Toast from '../components/toast'
 import { parse_change_result } from '../match/change_behavior_result'
-=======
 import PenaltyShootout from '../components/PenaltyShootout'
 import LiveMatchControls from '../components/LiveMatchControls'
 import SubstitutionModal from '../components/SubstitutionModal'
->>>>>>> origin/develop
 import './Match.css'
 
 const statuses = { in_progress: 'En juego', paused: 'En pausa', finished: 'Finalizado' }
@@ -225,6 +221,7 @@ function MatchView({ match_id, room_behavior_names }) {
   const [behavior_list, set_behavior_list] = useState([])
   const [change_open, set_change_open] = useState(false)
   const [toast, set_toast] = useState(null)
+  const [submitting_changes, set_submitting_changes] = useState(false)
   const close_toast = useCallback(() => set_toast(null), [])
   const [substitution_open, set_substitution_open] = useState(false)
   const [selected_out, set_selected_out] = useState(null)
@@ -233,6 +230,7 @@ function MatchView({ match_id, room_behavior_names }) {
   const [substitution_error, set_substitution_error] = useState('')
   const own_club_id = useMemo(() => read_session()?.club_id, [])
   const own_team_ref = useRef(null)
+  const pending_behavior_changes_ref = useRef(new Set())
   const state_revision_ref = useRef(null)
   const receive_protocol_message = useCallback((raw) => {
     if (raw?.type === 'connection') {
@@ -241,14 +239,34 @@ function MatchView({ match_id, room_behavior_names }) {
     }
     const change_result = parse_change_result(raw)
     if (change_result) {
-      if (change_result.ok) {
-        set_change_open(false)
-        set_toast({ type: 'success', message: 'Comportamiento actualizado para el siguiente tick' })
-      } else {
+      const pending = pending_behavior_changes_ref.current
+
+      if (!change_result.ok) {
+        pending.clear()
+        set_submitting_changes(false)
         set_toast({ type: 'error', message: change_result.message })
+        return
       }
+
+      const player_id =
+        change_result.playerId ?? pending.values().next().value
+
+      if (player_id == null || !pending.has(player_id)) return
+
+      pending.delete(player_id)
+
+      if (pending.size === 0) {
+        set_submitting_changes(false)
+        set_change_open(false)
+        set_toast({
+          type: 'success',
+          message: 'Comportamiento actualizado para el siguiente tick',
+        })
+      }
+
       return
     }
+
     const message = parse_match_message(raw)
     if (message) {
       const team = normalize_team(message.payload.team)
@@ -332,10 +350,38 @@ function MatchView({ match_id, room_behavior_names }) {
   }, [has_state])
 
   function confirm_changes(changes) {
-    changes.forEach(({ playerId, behaviorId }) => {
-      send_message(build_change_behavior_message(playerId, behaviorId))
-    })
+    if (
+      !Array.isArray(changes) ||
+      changes.length === 0 ||
+      submitting_changes
+    ) {
+      return
+    }
+
+    const pending = new Set(changes.map(({ playerId }) => playerId))
+    pending_behavior_changes_ref.current = pending
+    set_submitting_changes(true)
+
+    try {
+      for (const { playerId, behaviorId } of changes) {
+        const message = build_change_behavior_message(playerId, behaviorId)
+
+        if (!send_message(message)) {
+          throw new Error(
+            'No se pudo enviar el cambio. Verificá la conexión.'
+          )
+        }
+      }
+    } catch (cause) {
+      pending_behavior_changes_ref.current.clear()
+      set_submitting_changes(false)
+      set_toast({
+        type: 'error',
+        message: cause.message || 'No se pudieron enviar los cambios.',
+      })
+    }
   }
+
   const behavior_name = (player) => player.behavior_name?.trim() || behavior_names[player.behavior_id] || room_behavior_names?.[player.behavior_id] || 'Nombre no disponible'
   const encounter = state ? `${state.home_club.name} vs. ${state.away_club.name}` : 'Estado del partido'
   const team_coach_active = state?.coach_active === true ||
@@ -409,19 +455,25 @@ function MatchView({ match_id, room_behavior_names }) {
         </section>
         <MatchPitch state={state} protocol_state={protocol_state} />
         {change_open && (
-          <ChangeBehaviorModal
-            starters={get_my_starters(state, read_session()?.club_id)}
-            behaviors={behavior_list}
-            on_confirm={confirm_changes}
-            on_close={() => set_change_open(false)}
-          />
+            <ChangeBehaviorModal
+              starters={get_my_starters(state, read_session()?.club_id)}
+              behaviors={behavior_list}
+              submitting={submitting_changes}
+              on_confirm={confirm_changes}
+              on_close={() => set_change_open(false)}
+            />
         )}
-        <div className="match-pitch-footer"><Link to="/home">← Volver al menú</Link>
-        {state.status !== 'finished' && (
-          <button type="button" className="home-action" onClick={() => set_change_open(true)}>
-            Cambiar comportamiento
-          </button>
-        )}
+          <div className="match-pitch-footer"><Link to="/home">← Volver al menú</Link>
+            {state.status !== 'finished' && (
+              <button
+                type="button"
+                className="home-action"
+                disabled={behavior_list.length === 0 || submitting_changes}
+                onClick={() => set_change_open(true)}
+              >
+                Cambiar comportamiento
+              </button>
+            )}
         <span>Restante: <time>{time(state.remaining_time)}</time></span></div>
         <LiveMatchControls
           status={state.status}

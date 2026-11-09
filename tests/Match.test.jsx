@@ -380,7 +380,7 @@ describe('Estado del partido por WebSocket', () => {
     mount()
     await emit(() => { sockets[0].open(); sockets[0].state() })
     await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
-    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Ana'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Jugador 01'), { target: { value: 'b2' } }))
     await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
     expect(sockets[0].send).toHaveBeenCalledWith(
       JSON.stringify({ action: 'CHANGE_BEHAVIOR', payload: { playerId: 'p1', behaviorId: 'b2' } }),
@@ -391,9 +391,9 @@ describe('Estado del partido por WebSocket', () => {
     mount()
     await emit(() => { sockets[0].open(); sockets[0].state() })
     await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
-    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Ana'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Jugador 01'), { target: { value: 'b2' } }))
     await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
-    await emit(() => sockets[0].message({ type: 'error', status: 404, message: 'Comportamiento no disponible' }))
+    await emit(() => sockets[0].message({ type: 'error', ok: false, error_code: 'BEHAVIOR_CHANGE_BEHAVIOR_UNAVAILABLE', message: 'Comportamiento no disponible' }))
     expect(sockets[0].close).not.toHaveBeenCalled()
     expect(screen.queryByText('El partido no existe.')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Marcador: 0 a 0')).toBeInTheDocument()
@@ -403,7 +403,7 @@ describe('Estado del partido por WebSocket', () => {
     mount()
     await emit(() => { sockets[0].open(); sockets[0].state() })
     await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
-    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Ana'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Jugador 01'), { target: { value: 'b2' } }))
     await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
     await emit(() => sockets[0].message({ event: 'BEHAVIOR_CHANGED', payload: { playerId: 'p1', behaviorId: 'b2' } }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -414,9 +414,9 @@ describe('Estado del partido por WebSocket', () => {
     mount()
     await emit(() => { sockets[0].open(); sockets[0].state() })
     await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
-    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Ana'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Jugador 01'), { target: { value: 'b2' } }))
     await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
-    await emit(() => sockets[0].message({ type: 'error', status: 404, message: 'Comportamiento no disponible' }))
+    await emit(() => sockets[0].message({ type: 'error', ok: false, error_code: 'BEHAVIOR_CHANGE_BEHAVIOR_UNAVAILABLE', message: 'Comportamiento no disponible' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Comportamiento no disponible')
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
@@ -428,6 +428,32 @@ describe('Estado del partido por WebSocket', () => {
     expect(screen.getByLabelText('Marcador: 0 a 0')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('con varios cambios seguidos, un error posterior al primer acuse no corta la vista', async () => {
+    mount()
+    const players = [
+      snapshot().players[0],
+      { ...snapshot().players[0], player_id: 'p2', name: 'Beto' },
+    ]
+    await emit(() => { sockets[0].open(); sockets[0].state({ players }) })
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Cambiar comportamiento' })))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Jugador 01'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.change(screen.getByLabelText('Comportamiento de Beto'), { target: { value: 'b2' } }))
+    await emit(() => fireEvent.click(screen.getByRole('button', { name: 'Confirmar' })))
+    await emit(() => sockets[0].message({ event: 'BEHAVIOR_CHANGED', payload: { playerId: 'p1', behaviorId: 'b2' } }))
+    await emit(() => sockets[0].message({ type: 'error', ok: false, error_code: 'BEHAVIOR_CHANGE_BEHAVIOR_UNAVAILABLE', message: 'Comportamiento no disponible' }))
+    expect(sockets[0].close).not.toHaveBeenCalled()
+    expect(screen.queryByText('El partido no existe.')).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Comportamiento no disponible')
+  })
+  it('un error con error_code del cambio de comportamiento nunca es terminal', async () => {
+    mount()
+    await emit(() => { sockets[0].open(); sockets[0].state() })
+    await emit(() => sockets[0].message({ type: 'error', ok: false, error_code: 'BEHAVIOR_CHANGE_MATCH_NOT_RUNNING', message: 'El partido no está en curso' }))
+    expect(sockets[0].close).not.toHaveBeenCalled()
+    expect(screen.queryByText('El partido no existe.')).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('El partido no está en curso')
   })
 })
 
