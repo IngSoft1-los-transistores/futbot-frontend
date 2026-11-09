@@ -452,18 +452,30 @@ function MatchView({ match_id, room_behavior_names }) {
             <h2><i className="match-team-color match-team-color--away" aria-hidden="true" />{state.away_club.name}</h2>
           </div>
           <div className="match-clock"><span className={`match-status match-status--${state.status}`}>{statuses[state.status]}</span><time aria-label="Tiempo transcurrido">{time(state.current_time)}</time></div>
-        </section>
-        <MatchPitch state={state} protocol_state={protocol_state} />
-        {change_open && (
-            <ChangeBehaviorModal
-              starters={get_my_starters(state, read_session()?.club_id)}
-              behaviors={behavior_list}
-              submitting={submitting_changes}
-              on_confirm={confirm_changes}
-              on_close={() => set_change_open(false)}
+        </section>            
+          <LiveMatchControls
+            status={state.status}
+            visible={Boolean(own_team) && !protocol_state.penalties.active}
+            disabled={team_coach_active}
+            onOpen={open_substitutions}
+          />
+          <PenaltyShootout
+            penalties={protocol_state.penalties}
+            home_name={state.home_club.name}
+            away_name={state.away_club.name}
+            revision={state.revision}
+          />
+          <div className="match-pitch-stage">
+            {/* current_time is frozen during a pause, so the key only changes when a new pause starts. */}
+            {state.status === 'paused' && <PauseBanner key={`${state.phase}-${state.current_time}`} phase={state.phase} pause_duration={state.pause_duration} pause_remaining={state.pause_remaining} />}
+            <MatchPitch
+              state={state}
+              protocol_state={protocol_state}
+              penalties_active={protocol_state.penalties.active}
             />
-        )}
-          <div className="match-pitch-footer"><Link to="/home">← Volver al menú</Link>
+          </div>
+          <div className="match-pitch-footer"><Link to="/home">← Volver al menú</Link><span>Restante: <time>{time(state.remaining_time)}</time></span></div>
+          <div className="match-change-behavior">
             {state.status !== 'finished' && (
               <button
                 type="button"
@@ -474,31 +486,18 @@ function MatchView({ match_id, room_behavior_names }) {
                 Cambiar comportamiento
               </button>
             )}
-        <span>Restante: <time>{time(state.remaining_time)}</time></span></div>
-        <LiveMatchControls
-          status={state.status}
-          visible={Boolean(own_team) && !protocol_state.penalties.active}
-          disabled={team_coach_active}
-          onOpen={open_substitutions}
-        />
-        <PenaltyShootout
-          penalties={protocol_state.penalties}
-          home_name={state.home_club.name}
-          away_name={state.away_club.name}
-          revision={state.revision}
-        />
-        <MatchPitch
-          state={state}
-          protocol_state={protocol_state}
-          penalties_active={protocol_state.penalties.active}
-        />
-        <div className="match-pitch-stage">
-          {/* current_time is frozen during a pause, so the key only changes when a new pause starts. */}
-          {state.status === 'paused' && <PauseBanner key={`${state.phase}-${state.current_time}`} phase={state.phase} pause_duration={state.pause_duration} pause_remaining={state.pause_remaining} />}
-          <MatchPitch state={state} protocol_state={protocol_state} />
-        </div>
-        <div className="match-pitch-footer"><Link to="/home">← Volver al menú</Link><span>Restante: <time>{time(state.remaining_time)}</time></span></div>
-        <details className="match-details">
+          </div>
+          {change_open && (
+            <ChangeBehaviorModal
+              starters={get_my_starters(state, read_session()?.club_id)}
+              behaviors={behavior_list}
+              submitting={submitting_changes}
+              on_confirm={confirm_changes}
+              on_close={() => set_change_open(false)}
+            />
+          )}
+
+          <details className="match-details">
           <summary>Jugadores y acciones del partido</summary>
         <div className="match-teams">
           {[state.home_club, state.away_club].map((club) => <section className="match-panel" key={club.club_id}>
