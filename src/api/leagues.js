@@ -107,3 +107,13 @@ export function getLeagueStandings(leagueId, { signal } = {}) {
     { signal }
   );
 }
+
+export function update_league_lineup(league_id, { starters, substitutes }) {
+  return request(`${league_path(league_id)}/lineup`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      starters: starters.map(String),
+      substitutes: substitutes.map(String),
+    }),
+  })
+}
